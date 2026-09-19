@@ -31,6 +31,7 @@
     "@angular/router": "^21.1.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-updater": "^2.11.0",
     "postcss": "^8.5.28",
     "rxjs": "~7.8.0",
     "tailwindcss": "^4.3.3",

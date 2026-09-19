@@ -1,5 +1,6 @@
 import { Component, ElementRef, HostListener, signal, ViewChild } from '@angular/core';
 import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
+import { check } from '@tauri-apps/plugin-updater';
 
 export interface ChatMessage {
   id: string;
@@ -34,9 +35,9 @@ function getAppWindow(): AppWindow {
   }
 
   return {
-    async setSize(_size: LogicalSize): Promise<void> {},
-    async center(): Promise<void> {},
-    async startDragging(): Promise<void> {},
+    async setSize(_size: LogicalSize): Promise<void> { },
+    async center(): Promise<void> { },
+    async startDragging(): Promise<void> { },
   };
 }
 
@@ -46,6 +47,19 @@ function getAppWindow(): AppWindow {
   styleUrl: './app.css',
 })
 export class App {
+
+  constructor() {
+    this.checkForUpdates();
+  }
+
+  async checkForUpdates(): Promise<void> {
+    const update = await check();
+
+    if (update) {
+      await update.downloadAndInstall();
+    }
+  }
+
   private readonly window: AppWindow = getAppWindow();
 
   @ViewChild('messagesContainer') private messagesContainer?: ElementRef<HTMLDivElement>;

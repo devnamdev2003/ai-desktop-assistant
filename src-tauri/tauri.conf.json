@@ -2,9 +2,9 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Aivora",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.devnamdev.aivora",
   "build": {
-    "frontendDist": "../dist/frontend",
+    "frontendDist": "../dist/frontend/browser",
     "devUrl": "http://localhost:4200",
     "beforeDevCommand": "npm start",
     "beforeBuildCommand": "npm run build"
@@ -31,8 +31,17 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU4RkM5OEQ0MDlBQTZDMjMKUldRamJLb0oxSmo4NkdiSUE1MS9WdWFvRHJUbFBmemZERDYxODQrUERjckhjaERWeW54djkwRjMK",
+      "endpoints": [
+        "https://github.com/devnamdev2003/ai-desktop-assistant/releases/latest/download/latest.json"
+      ]
+    }
+  },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",
