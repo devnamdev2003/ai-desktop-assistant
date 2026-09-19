@@ -1,0 +1,180 @@
+<div class="flex h-screen w-screen items-center justify-center">
+
+  <!-- ========================= -->
+  <!-- COLLAPSED ORB -->
+  <!-- ========================= -->
+
+  @if (!isExpanded) {
+    <div
+      class="flex h-screen w-screen items-center justify-center"
+    >
+      <button
+        type="button"
+        (mousedown)="startOrbInteraction($event)"
+        (click)="handleOrbClick()"
+        class="group relative flex h-32 w-32 cursor-pointer
+               items-center justify-center
+               rounded-full border-0 bg-transparent outline-none"
+      >
+
+        <!-- Outer glow -->
+        <div
+          class="absolute inset-0 rounded-full
+                 bg-[rgba(20,20,35,0.75)]
+                 shadow-[0_0_25px_rgba(120,80,255,0.7),0_0_60px_rgba(80,120,255,0.35)]
+                 transition-all duration-300
+                 group-hover:scale-110"
+        ></div>
+
+        <!-- Inner orb -->
+        <div
+          class="relative h-14 w-14 rounded-full
+                 bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%,#24105f)]
+                 shadow-[0_0_20px_rgba(150,120,255,0.9),0_0_45px_rgba(100,70,255,0.5)]
+                 transition-transform duration-300
+                 group-hover:scale-110
+                 group-active:scale-95"
+        ></div>
+
+      </button>
+    </div>
+  }
+
+
+  <!-- ========================= -->
+  <!-- EXPANDED PANEL -->
+  <!-- ========================= -->
+
+  @if (isExpanded) {
+    <div
+      class="h-[500px] w-[400px]
+             overflow-hidden rounded-3xl
+             border border-white/10
+             bg-slate-950/90
+             shadow-[0_0_60px_rgba(100,70,255,0.25)]
+             backdrop-blur-xl"
+    >
+
+      <!-- HEADER / DRAG AREA -->
+
+      <div
+        (mousedown)="startDragging($event)"
+        class="flex cursor-move select-none
+               items-center justify-between
+               px-6 py-5"
+      >
+
+        <div>
+          <div class="text-lg font-semibold tracking-wide text-white">
+            Aivora
+          </div>
+
+          <div class="text-xs text-white/40">
+            Your desktop AI agent
+          </div>
+        </div>
+
+
+        <!-- CLOSE BUTTON -->
+
+        <button
+          type="button"
+          (mousedown)="$event.stopPropagation()"
+          (click)="toggleAssistant()"
+          class="flex h-8 w-8
+                 items-center justify-center
+                 rounded-full
+                 bg-white/5
+                 text-white/60
+                 transition
+                 hover:bg-white/10
+                 hover:text-white"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <!-- MAIN CONTENT -->
+
+      <div
+        class="flex h-[400px]
+               flex-col
+               items-center
+               justify-center
+               px-8"
+      >
+
+        <!-- Aivora orb -->
+
+        <div
+          class="mb-8 flex h-20 w-20
+                 items-center justify-center
+                 rounded-full
+                 bg-purple-500/10
+                 shadow-[0_0_40px_rgba(120,80,255,0.3)]"
+        >
+          <div
+            class="h-9 w-9 rounded-full
+                   bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]"
+          ></div>
+        </div>
+
+
+        <!-- Title -->
+
+        <h2 class="text-xl font-medium text-white">
+          What can I help with dev?
+        </h2>
+
+
+        <!-- Description -->
+
+        <p class="mt-2 text-center text-sm text-white/40">
+          Ask Aivora about what you're doing on your screen.
+        </p>
+
+
+        <!-- Input -->
+
+        <div
+          class="mt-8 flex w-full
+                 items-center gap-2
+                 rounded-2xl
+                 border border-white/10
+                 bg-white/5
+                 px-4 py-3"
+        >
+
+          <input
+            type="text"
+            placeholder="Ask Aivora..."
+            class="min-w-0 flex-1
+                   bg-transparent
+                   text-sm
+                   text-white
+                   outline-none
+                   placeholder:text-white/30"
+          />
+
+          <button
+            type="button"
+            class="rounded-xl
+                   bg-purple-500/20
+                   px-3 py-2
+                   text-sm
+                   text-purple-200
+                   transition
+                   hover:bg-purple-500/30"
+          >
+            →
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+  }
+</div>
