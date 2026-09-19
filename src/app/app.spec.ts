@@ -38,4 +38,20 @@ describe('App', () => {
     const formatted = app.formatAnswer(md);
     expect(formatted).toBeTruthy();
   });
+
+  it('should handle quitApp without error', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    expect(async () => await app.quitApp()).not.toThrow();
+  });
+
+  it('should show and hide orb context menu', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    expect(app.showOrbContextMenu()).toBe(false);
+    app.onOrbContextMenu(new MouseEvent('contextmenu'));
+    expect(app.showOrbContextMenu()).toBe(true);
+    app.closeOrbContextMenu();
+    expect(app.showOrbContextMenu()).toBe(false);
+  });
 });

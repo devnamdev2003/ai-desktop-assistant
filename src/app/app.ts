@@ -3,6 +3,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow, LogicalSize, Window } from '@tauri-apps/api/window';
 import { marked } from 'marked';
+import { check } from '@tauri-apps/plugin-updater';
 
 export interface ChatMessage {
   id: string;
@@ -78,6 +79,19 @@ marked.use({
   },
 })
 export class App {
+
+  constructor() {
+    this.checkForUpdates();
+  }
+
+  async checkForUpdates(): Promise<void> {
+    const update = await check();
+
+    if (update) {
+      await update.downloadAndInstall();
+    }
+  }
+
   private readonly sanitizer = inject(DomSanitizer);
 
   @ViewChild('messagesContainer') private messagesContainer?: ElementRef<HTMLDivElement>;
@@ -90,6 +104,7 @@ export class App {
   messages = signal<ChatMessage[]>([]);
   copiedMessageId = signal<string | null>(null);
   errorMessage = signal<string | null>(null);
+  showOrbContextMenu = signal(false);
 
   /**
    * Dynamically retrieves the active Tauri window if running in Tauri desktop,
@@ -134,8 +149,8 @@ export class App {
     }
     return Boolean(
       isTauri() ||
-        (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ ||
-        (window as unknown as { isTauri?: boolean }).isTauri
+      (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ ||
+      (window as unknown as { isTauri?: boolean }).isTauri
     );
   }
 
@@ -213,7 +228,7 @@ export class App {
       await this.safeWindowOp(async (win) => {
         try {
           await win.setResizable(true);
-        } catch {}
+        } catch { }
 
         if (this.isMaximized()) {
           try {
@@ -237,7 +252,7 @@ export class App {
         if (this.isMaximized()) {
           try {
             await win.unmaximize();
-          } catch {}
+          } catch { }
         }
         await win.setSize(new LogicalSize(180, 180));
         await win.center();
@@ -253,7 +268,7 @@ export class App {
     await this.safeWindowOp(async (win) => {
       try {
         await win.setResizable(true);
-      } catch {}
+      } catch { }
 
       if (nextState) {
         try {
@@ -266,7 +281,7 @@ export class App {
       } else {
         try {
           await win.unmaximize();
-        } catch {}
+        } catch { }
         await win.setSize(new LogicalSize(440, 560));
         await win.center();
       }
@@ -437,6 +452,10 @@ export class App {
   }
 
   handleGlobalClick(event: MouseEvent): void {
+    if (this.showOrbContextMenu()) {
+      this.showOrbContextMenu.set(false);
+    }
+
     const target = event.target as HTMLElement;
     const btn = target.closest('.copy-code-btn') as HTMLButtonElement | null;
     if (btn) {
@@ -541,5 +560,42 @@ export class App {
     }
 
     this.toggleAssistant();
+  }
+
+  onOrbContextMenu(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.showOrbContextMenu.set(true);
+  }
+
+  closeOrbContextMenu(): void {
+    this.showOrbContextMenu.set(false);
+  }
+
+  async quitApp(event?: Event): Promise<void> {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    this.showOrbContextMenu.set(false);
+
+    await this.safeWindowOp(async (win) => {
+      try {
+        await win.close();
+      } catch (closeErr) {
+        console.warn('win.close() encountered error, attempting win.destroy():', closeErr);
+        try {
+          await win.destroy();
+        } catch (destroyErr) {
+          console.error('win.destroy() failed:', destroyErr);
+        }
+      }
+    });
+
+    // In web preview fallback
+    if (!this.isTauriEnvironment()) {
+      this.isExpanded = false;
+    }
   }
 }
