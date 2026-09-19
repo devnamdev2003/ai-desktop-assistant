@@ -80,7 +80,7 @@
   <div id="aivora-expanded-panel"
     [class]="isMaximized()
         ? 'flex flex-col h-full w-full rounded-none overflow-hidden border-0 bg-slate-950 shadow-none transition-all duration-150'
-        : 'flex flex-col h-[540px] w-[420px] max-w-[95vw] max-h-[92vh] rounded-3xl overflow-hidden border border-white/10 bg-slate-950/95 shadow-[0_0_60px_rgba(100,70,255,0.28)] backdrop-blur-2xl transition-all duration-300'">
+        : 'flex flex-col h-[540px] w-[420px] max-w-[95vw] max-h-[92vh] rounded-3xl overflow-hidden border border-white/10 bg-slate-950/95 shadow-2xl shadow-black/80 backdrop-blur-2xl transition-all duration-300'">
 
     <!-- HEADER / DRAG AREA -->
 
@@ -89,10 +89,10 @@
       [class]="isMaximized() ? 'px-8 py-4' : 'px-5 py-3.5'">
 
       <div class="flex items-center gap-2.5">
-        <!-- Mini glowing orb -->
+        <!-- Mini orb -->
         <div class="relative flex h-6 w-6 items-center justify-center rounded-full
                    bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]
-                   shadow-[0_0_12px_rgba(140,90,255,0.8)]"></div>
+                   border border-white/20"></div>
 
         <div>
           <div class="flex items-center gap-1.5">
@@ -152,26 +152,6 @@
         </button>
         }
 
-        <!-- BIG SCREEN / MAXIMIZE TOGGLE BUTTON -->
-        <button id="toggle-screen-size-btn" type="button" (mousedown)="$event.stopPropagation()"
-          (click)="toggleMaximize()" [title]="isMaximized() ? 'Restore compact window' : 'Expand to big screen'"
-          [attr.aria-label]="isMaximized() ? 'Restore compact window' : 'Expand to big screen'" class="flex h-7 w-7 items-center justify-center rounded-full
-                   bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white">
-          @if (isMaximized()) {
-          <!-- Restore down / Compress icon -->
-          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M9 9L4 4m0 0h4m-4 0v4m6 6l5 5m0 0h-4m4 0v-4M9 15l-5 5m0 0h4m-4 0v-4m11-6l5-5m0 0h-4m4 0v4" />
-          </svg>
-          } @else {
-          <!-- Maximize / Big screen icon -->
-          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-          </svg>
-          }
-        </button>
-
         <!-- MINIMIZE / COLLAPSE TO ORB BUTTON -->
         <button id="minimize-to-orb-btn" type="button" (mousedown)="$event.stopPropagation()"
           (click)="toggleAssistant()" title="Minimize to floating orb" aria-label="Minimize to floating orb"
@@ -179,6 +159,26 @@
           <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 13H5" />
           </svg>
+        </button>
+
+        <!-- BIG SCREEN / MAXIMIZE TOGGLE BUTTON -->
+        <button id="toggle-screen-size-btn" type="button" (mousedown)="$event.stopPropagation()"
+          (click)="toggleMaximize()" [title]="isMaximized() ? 'Restore compact window' : 'Expand to big screen'"
+          [attr.aria-label]="isMaximized() ? 'Restore compact window' : 'Expand to big screen'" class="flex h-7 w-7 items-center justify-center rounded-full
+                   bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white">
+          @if (isMaximized()) {
+          <!-- Restore down / Collapse screen size icon (arrows pointing inward) -->
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 14h6v6m0-6L3 21m17-11h-6V4m0 6l7-7" />
+          </svg>
+          } @else {
+          <!-- Expand to big screen icon (arrows pointing outward) -->
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 3h6v6m0-6L14 10M9 21H3v-6m0 6l7-7" />
+          </svg>
+          }
         </button>
 
         <!-- QUIT / CLOSE APP PERMANENTLY BUTTON -->
@@ -205,12 +205,11 @@
         @if (messages().length === 0) {
         <div class="flex flex-col items-center justify-center my-auto py-6 text-center">
 
-          <!-- Glowing Aivora orb -->
-          <div
-            class="flex items-center justify-center rounded-full bg-purple-500/10 shadow-[0_0_40px_rgba(120,80,255,0.35)]"
-            [class]="isMaximized() ? 'mb-6 h-24 w-24 shadow-[0_0_50px_rgba(120,80,255,0.4)]' : 'mb-5 h-20 w-20'">
+          <!-- Aivora orb -->
+          <div class="flex items-center justify-center rounded-full bg-white/5 border border-white/10"
+            [class]="isMaximized() ? 'mb-6 h-24 w-24' : 'mb-5 h-20 w-20'">
             <div
-              class="rounded-full bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)] shadow-[0_0_15px_rgba(150,110,255,0.7)]"
+              class="rounded-full bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)] border border-white/20"
               [class]="isMaximized() ? 'h-11 w-11' : 'h-9 w-9'"></div>
           </div>
 
@@ -286,19 +285,18 @@
             <!-- Mini avatar -->
             <div class="h-6 w-6 rounded-full shrink-0 mt-1
                              bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]
-                             shadow-[0_0_10px_rgba(150,110,255,0.6)]"></div>
+                             border border-white/15"></div>
 
             <!-- Assistant bubble -->
             <div
-              class="group relative rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 text-white/90 shadow-md"
+              class="group relative rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 text-white/90 shadow-sm"
               [class]="isMaximized() ? 'max-w-[88%] p-4 text-sm' : 'max-w-[92%] p-3 text-xs'"
               [class.border-red-500/30]="msg.isError" [class.bg-red-950/20]="msg.isError">
               <!-- Formatted HTML response -->
               <div class="aivora-markdown leading-relaxed break-words" [class]="isMaximized() ? 'text-sm' : 'text-xs'">
                 <span [innerHTML]="msg.formattedText || msg.text"></span>
                 @if (msg.isStreaming) {
-                <span
-                  class="streaming-cursor w-1.5 h-3.5 ml-1 inline-block align-middle bg-purple-400 rounded-xs shadow-[0_0_8px_rgba(192,132,252,0.8)]"
+                <span class="streaming-cursor w-1.5 h-3.5 ml-1 inline-block align-middle bg-purple-400 rounded-xs"
                   title="Generating..."></span>
                 }
               </div>
@@ -335,9 +333,9 @@
           <div class="flex items-start gap-2.5">
             <div class="h-6 w-6 rounded-full shrink-0 mt-1
                            bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]
-                           shadow-[0_0_10px_rgba(150,110,255,0.6)] animate-pulse"></div>
+                           border border-white/15"></div>
             <div class="flex items-center gap-2 rounded-2xl rounded-tl-sm
-                           border border-purple-500/20 bg-purple-950/20 px-3.5 py-2.5 text-xs text-purple-200">
+                           border border-white/10 bg-slate-900/60 px-3.5 py-2.5 text-xs text-white/80">
               <span class="text-white/70">Aivora is thinking</span>
               <span class="flex gap-1">
                 <span class="h-1.5 w-1.5 rounded-full bg-purple-400 animate-bounce"></span>
@@ -360,7 +358,7 @@
       [class]="isMaximized() ? 'p-4 md:px-12' : 'p-3.5 bg-slate-950/80'">
       <div [class]="isMaximized() ? 'max-w-5xl mx-auto w-full' : 'w-full'">
         <form (submit)="$event.preventDefault(); sendMessage()"
-          class="flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3.5 py-2.5 focus-within:border-purple-500/50 focus-within:bg-white/[0.07] transition">
+          class="flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3.5 py-2.5 focus-within:border-white/30 focus-within:bg-white/[0.07] focus-within:shadow-none transition-colors">
 
           <input #chatInput id="aivora-chat-input" type="text" [value]="inputText()" (input)="onInputChange($event)"
             [disabled]="isLoading()" placeholder="Ask Aivora..." autocomplete="off"
@@ -370,7 +368,7 @@
             [disabled]="isLoading() || (!inputText().trim() && !isStreamingActive())"
             [title]="isStreamingActive() ? 'Stop response' : 'Send message'"
             [attr.aria-label]="isStreamingActive() ? 'Stop response' : 'Send message'" class="flex h-8 w-8 items-center justify-center rounded-xl
-                     bg-purple-600 text-white shadow-md transition
+                     bg-purple-600 text-white transition
                      hover:bg-purple-500 active:scale-95
                      disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-purple-600">
             @if (isLoading()) {
@@ -415,7 +413,7 @@
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4"
     (click)="closeUpdateModal()">
     <div id="aivora-update-modal"
-      class="relative w-full max-w-md rounded-2xl border border-white/15 bg-slate-900/95 p-6 shadow-[0_0_50px_rgba(120,80,255,0.3)] backdrop-blur-xl text-white"
+      class="relative w-full max-w-md rounded-2xl border border-white/15 bg-slate-900/95 p-6 shadow-2xl shadow-black/80 backdrop-blur-xl text-white"
       (click)="$event.stopPropagation()">
 
       <!-- Modal Close Button -->
