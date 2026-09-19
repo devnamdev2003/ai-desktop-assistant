@@ -50,6 +50,14 @@
         <span class="h-1.5 w-1.5 rounded-full bg-purple-400"></span>
         <span>Open Aivora</span>
       </button>
+      <button type="button" (click)="checkForUpdates(true); closeOrbContextMenu()"
+        class="flex items-center gap-1.5 px-2.5 py-1 text-white/80 hover:bg-emerald-500/20 hover:text-white transition text-left cursor-pointer">
+        <svg class="h-2.5 w-2.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        <span>Check Update</span>
+      </button>
       <div class="my-0.5 h-px bg-white/10"></div>
       <button type="button" (click)="quitApp($event)"
         class="flex items-center gap-1.5 px-2.5 py-1 text-red-300 hover:bg-red-500/25 hover:text-red-200 transition text-left cursor-pointer">
@@ -109,6 +117,29 @@
       <!-- HEADER ACTIONS -->
 
       <div class="flex items-center gap-1.5">
+        <!-- CHECK / INSTALL UPDATE BUTTON -->
+        <button id="check-update-btn" type="button" (mousedown)="$event.stopPropagation()"
+          (click)="availableUpdate() ? openUpdateModal() : checkForUpdates(true)"
+          [title]="availableUpdate() ? 'Update available! Click to update' : 'Check for app updates'"
+          [attr.aria-label]="availableUpdate() ? 'Update available! Click to update' : 'Check for app updates'"
+          class="relative flex h-7 items-center gap-1 px-2 rounded-full text-xs font-medium transition cursor-pointer"
+          [class]="availableUpdate() ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'">
+          <svg class="h-3.5 w-3.5" [class.animate-spin]="isCheckingUpdate()" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          @if (availableUpdate()) {
+          <span class="text-[11px] font-semibold text-emerald-300">v{{ availableUpdate()?.version }}</span>
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          } @else if (isCheckingUpdate()) {
+          <span class="text-[10px] text-white/60 hidden sm:inline">Checking...</span>
+          }
+        </button>
+
         <!-- CLEAR CONVERSATION -->
         @if (messages().length > 0) {
         <button id="clear-chat-btn" type="button" (mousedown)="$event.stopPropagation()" (click)="clearChat()"
@@ -373,6 +404,122 @@
       </div>
     </div>
 
+  </div>
+  }
+
+  <!-- ========================= -->
+  <!-- UPDATE DIALOG MODAL -->
+  <!-- ========================= -->
+  @if (showUpdateModal()) {
+  <div id="aivora-update-modal-backdrop"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4"
+    (click)="closeUpdateModal()">
+    <div id="aivora-update-modal"
+      class="relative w-full max-w-md rounded-2xl border border-white/15 bg-slate-900/95 p-6 shadow-[0_0_50px_rgba(120,80,255,0.3)] backdrop-blur-xl text-white"
+      (click)="$event.stopPropagation()">
+
+      <!-- Modal Close Button -->
+      <button id="close-update-modal-btn" type="button" (click)="closeUpdateModal()" title="Close" aria-label="Close"
+        class="absolute top-4 right-4 flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition cursor-pointer">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <!-- Header with Glow -->
+      <div class="flex items-center gap-3 mb-4">
+        <div
+          class="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-300">
+          <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-base font-semibold text-white tracking-wide">
+            {{ availableUpdate() ? 'New Version Available' : 'Software Update' }}
+          </h3>
+          <p class="text-xs text-white/50">Current version: v{{ currentAppVersion() }}</p>
+        </div>
+      </div>
+
+      <!-- Update Details / Status -->
+      @if (availableUpdate()) {
+      <div class="space-y-3.5 mb-6">
+        <div class="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3.5">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
+              <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Aivora v{{ availableUpdate()?.version }} is ready
+            </span>
+            <span class="text-[10px] text-white/40">{{ availableUpdate()?.date || 'Latest release' }}</span>
+          </div>
+          <p class="text-xs text-white/80 leading-relaxed">{{ availableUpdate()?.notes }}</p>
+        </div>
+
+        @if (updateStatusMessage()) {
+        <div
+          class="text-xs text-purple-300 flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-lg p-2.5">
+          @if (isInstallingUpdate()) {
+          <svg class="h-3.5 w-3.5 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          }
+          <span>{{ updateStatusMessage() }}</span>
+        </div>
+        }
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-end gap-2.5">
+        <button id="cancel-update-btn" type="button" (click)="closeUpdateModal()"
+          class="px-4 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white bg-white/5 hover:bg-white/10 transition cursor-pointer">
+          Later
+        </button>
+        <button id="confirm-update-btn" type="button" (click)="updateToLatestRelease()"
+          [disabled]="isInstallingUpdate()"
+          class="px-5 py-2 rounded-xl text-xs font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-lg shadow-purple-600/30 active:scale-95 transition disabled:opacity-50 flex items-center gap-2 cursor-pointer">
+          @if (isInstallingUpdate()) {
+          <svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span>Updating & Restarting...</span>
+          } @else {
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          <span>Update & Restart (v{{ availableUpdate()?.version }})</span>
+          }
+        </button>
+      </div>
+
+      } @else {
+      <!-- No Update Available / Status Message -->
+      <div class="py-4 text-center space-y-2">
+        <div
+          class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 mb-1 border border-emerald-500/20">
+          <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <p class="text-sm font-medium text-white">
+          {{ updateStatusMessage() || 'Your app is up to date!' }}
+        </p>
+        <p class="text-xs text-white/40">You are running the latest version (v{{ currentAppVersion() }}).</p>
+      </div>
+
+      <div class="mt-4 flex justify-end">
+        <button id="close-uptodate-btn" type="button" (click)="closeUpdateModal()"
+          class="px-4 py-2 rounded-xl text-xs font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/15 transition cursor-pointer">
+          Done
+        </button>
+      </div>
+      }
+
+    </div>
   </div>
   }
 </div>

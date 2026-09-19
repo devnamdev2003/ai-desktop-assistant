@@ -3,7 +3,15 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow, LogicalSize, Window } from '@tauri-apps/api/window';
 import { marked } from 'marked';
-import { check } from '@tauri-apps/plugin-updater';
+import { check, Update } from '@tauri-apps/plugin-updater';
+
+export interface UpdateInfo {
+  version: string;
+  notes?: string;
+  date?: string;
+  currentVersion?: string;
+  downloadUrl?: string;
+}
 
 export interface ChatMessage {
   id: string;
@@ -81,24 +89,6 @@ marked.use({
 })
 export class App {
 
-  constructor() {
-    this.checkForUpdates();
-  }
-
-  async checkForUpdates(): Promise<void> {
-    if (!this.isTauriEnvironment()) {
-      return;
-    }
-    try {
-      const update = await check();
-      if (update) {
-        await update.downloadAndInstall();
-      }
-    } catch (err) {
-      console.warn('Check for updates failed:', err);
-    }
-  }
-
   private readonly sanitizer = inject(DomSanitizer);
 
   @ViewChild('messagesContainer') private messagesContainer?: ElementRef<HTMLDivElement>;
@@ -114,6 +104,188 @@ export class App {
   showOrbContextMenu = signal(false);
   isStreamingActive = signal(false);
   private activeStreamTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // App Update State
+  currentAppVersion = signal('0.1.2');
+  isCheckingUpdate = signal(false);
+  isInstallingUpdate = signal(false);
+  availableUpdate = signal<UpdateInfo | null>(null);
+  updateStatusMessage = signal<string | null>(null);
+  updateDownloadedBytes = signal<number>(0);
+  updateTotalBytes = signal<number>(0);
+  showUpdateModal = signal(false);
+  private tauriUpdateHandle: Update | null = null;
+
+  constructor() {
+    this.checkForUpdates(false);
+  }
+
+  /**
+   * Check for app updates against GitHub releases / Tauri updater endpoint.
+   * If manual is true, user-facing notifications/modals will be shown.
+   */
+  async checkForUpdates(manual: boolean = false): Promise<void> {
+    this.isCheckingUpdate.set(true);
+    this.updateStatusMessage.set(null);
+
+    // 1. If running inside Tauri desktop, use the native updater plugin
+    if (this.isTauriEnvironment()) {
+      try {
+        const update = await check();
+        if (update) {
+          this.tauriUpdateHandle = update;
+          this.availableUpdate.set({
+            version: update.version,
+            currentVersion: update.currentVersion || this.currentAppVersion(),
+            notes: update.body || 'A new version with performance improvements and updates is available.',
+            date: update.date,
+          });
+          if (manual) {
+            this.showUpdateModal.set(true);
+          }
+        } else {
+          this.availableUpdate.set(null);
+          this.tauriUpdateHandle = null;
+          if (manual) {
+            this.updateStatusMessage.set(`You are already running the latest version (v${this.currentAppVersion()}).`);
+            this.showUpdateModal.set(true);
+          }
+        }
+      } catch (err) {
+        console.warn('Tauri update check failed, trying fallback:', err);
+        await this.checkFallbackRelease(manual);
+      } finally {
+        this.isCheckingUpdate.set(false);
+      }
+      return;
+    }
+
+    // 2. Web or browser environment: fetch latest.json from GitHub releases
+    await this.checkFallbackRelease(manual);
+  }
+
+  private async checkFallbackRelease(manual: boolean): Promise<void> {
+    try {
+      const response = await fetch(
+        'https://raw.githubusercontent.com/devnamdev2003/ai-desktop-assistant/main/latest.json?t=' + Date.now()
+      );
+      if (response.ok) {
+        const data = await response.json();
+        const latestVersion = data.version;
+        const current = this.currentAppVersion();
+
+        if (latestVersion && this.isVersionNewer(latestVersion, current)) {
+          const downloadUrl =
+            data.platforms?.['windows-x86_64']?.url ||
+            'https://github.com/devnamdev2003/ai-desktop-assistant/releases/latest';
+
+          this.availableUpdate.set({
+            version: latestVersion,
+            currentVersion: current,
+            notes: data.notes || 'Includes new features, fixes, and performance updates.',
+            date: data.pub_date,
+            downloadUrl,
+          });
+          if (manual) {
+            this.showUpdateModal.set(true);
+          }
+        } else {
+          this.availableUpdate.set(null);
+          if (manual) {
+            this.updateStatusMessage.set(`You are already running the latest version (v${current}).`);
+            this.showUpdateModal.set(true);
+          }
+        }
+      } else {
+        throw new Error('Failed to load release metadata');
+      }
+    } catch (err) {
+      console.warn('Fallback update check error:', err);
+      if (manual) {
+        this.updateStatusMessage.set('Could not fetch update info. Please check your internet connection.');
+        this.showUpdateModal.set(true);
+      }
+    } finally {
+      this.isCheckingUpdate.set(false);
+    }
+  }
+
+  private isVersionNewer(latest: string, current: string): boolean {
+    const lParts = latest.split('.').map((p) => parseInt(p, 10) || 0);
+    const cParts = current.split('.').map((p) => parseInt(p, 10) || 0);
+    const maxLen = Math.max(lParts.length, cParts.length);
+
+    for (let i = 0; i < maxLen; i++) {
+      const l = lParts[i] ?? 0;
+      const c = cParts[i] ?? 0;
+      if (l > c) return true;
+      if (l < c) return false;
+    }
+    return false;
+  }
+
+  /**
+   * Triggers download and installation of the latest release.
+   */
+  async updateToLatestRelease(): Promise<void> {
+    const updateInfo = this.availableUpdate();
+    if (!updateInfo) {
+      return;
+    }
+
+    this.isInstallingUpdate.set(true);
+    this.updateStatusMessage.set('Downloading and applying update...');
+
+    if (this.isTauriEnvironment() && this.tauriUpdateHandle) {
+      try {
+        let downloaded = 0;
+        let total = 0;
+
+        await this.tauriUpdateHandle.downloadAndInstall(
+          (event) => {
+            if (event.event === 'Started') {
+              total = event.data.contentLength ?? 0;
+              this.updateTotalBytes.set(total);
+            } else if (event.event === 'Progress') {
+              downloaded += event.data.chunkLength;
+              this.updateDownloadedBytes.set(downloaded);
+              if (total > 0) {
+                const pct = Math.round((downloaded / total) * 100);
+                this.updateStatusMessage.set(`Downloading update: ${pct}%`);
+              }
+            } else if (event.event === 'Finished') {
+              this.updateStatusMessage.set('Installing update and relaunching app...');
+            }
+          },
+          { restartAfterInstall: true }
+        );
+      } catch (err) {
+        console.error('Tauri download and install failed:', err);
+        this.updateStatusMessage.set('Update failed: ' + (err instanceof Error ? err.message : String(err)));
+        this.isInstallingUpdate.set(false);
+      }
+      return;
+    }
+
+    // Web / Direct Download
+    const downloadUrl =
+      updateInfo.downloadUrl ||
+      'https://github.com/devnamdev2003/ai-desktop-assistant/releases/latest';
+
+    this.updateStatusMessage.set('Redirecting to the latest release installer...');
+    setTimeout(() => {
+      window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+      this.isInstallingUpdate.set(false);
+    }, 800);
+  }
+
+  openUpdateModal(): void {
+    this.showUpdateModal.set(true);
+  }
+
+  closeUpdateModal(): void {
+    this.showUpdateModal.set(false);
+  }
 
   /**
    * Dynamically retrieves the active Tauri window if running in Tauri desktop,
