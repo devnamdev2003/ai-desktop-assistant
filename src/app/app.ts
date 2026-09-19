@@ -85,10 +85,16 @@ export class App {
   }
 
   async checkForUpdates(): Promise<void> {
-    const update = await check();
-
-    if (update) {
-      await update.downloadAndInstall();
+    if (!this.isTauriEnvironment()) {
+      return;
+    }
+    try {
+      const update = await check();
+      if (update) {
+        await update.downloadAndInstall();
+      }
+    } catch (err) {
+      console.warn('Check for updates failed:', err);
     }
   }
 
@@ -97,7 +103,7 @@ export class App {
   @ViewChild('messagesContainer') private messagesContainer?: ElementRef<HTMLDivElement>;
   @ViewChild('chatInput') private chatInputElement?: ElementRef<HTMLInputElement>;
 
-  isExpanded = false;
+  isExpanded = typeof window !== 'undefined' ? !this.isTauriEnvironment() : false;
   isMaximized = signal(false);
   inputText = signal('');
   isLoading = signal(false);

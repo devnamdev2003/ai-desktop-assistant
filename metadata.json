@@ -1,0 +1,6 @@
+{
+  "name": "Aivora AI Assistant",
+  "description": "Desktop and web AI assistant with conversational chat, prompt suggestions, and markdown support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
