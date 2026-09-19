@@ -18,10 +18,6 @@
           "builder": "@angular/build:application",
           "options": {
             "browser": "src/main.ts",
-            "outputPath": {
-              "base": "dist",
-              "browser": ""
-            },
             "tsConfig": "tsconfig.app.json",
             "assets": [
               {

@@ -1,13 +1,13 @@
 {
   "name": "frontend",
   "version": "0.0.0",
-  "private": true,
   "scripts": {
     "dev": "ng serve --host 0.0.0.0 --port 3000 --proxy-config proxy.conf.json",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
     "lint": "echo 'No lint errors'",
     "ng": "ng",
+    "start": "ng serve --proxy-config proxy.conf.json",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
   "prettier": {
@@ -22,6 +22,8 @@
       }
     ]
   },
+  "private": true,
+  "packageManager": "npm@11.6.2",
   "dependencies": {
     "@angular/common": "^21.1.0",
     "@angular/compiler": "^21.1.0",
