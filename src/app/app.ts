@@ -254,7 +254,7 @@ export class App {
             await win.unmaximize();
           } catch { }
         }
-        await win.setSize(new LogicalSize(180, 180));
+        await win.setSize(new LogicalSize(120, 120));
         await win.center();
       });
       this.isMaximized.set(false);
@@ -501,7 +501,7 @@ export class App {
   // -----------------------------
 
   async startDragging(event: MouseEvent): Promise<void> {
-    if (event.button !== 0) {
+    if (event.button !== 0 || this.isMaximized()) {
       return;
     }
 

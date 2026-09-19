@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Aivora",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "identifier": "com.devnamdev.aivora",
   "build": {
     "frontendDist": "../dist/frontend/browser",
@@ -14,10 +14,10 @@
       {
         "label": "main",
         "title": "Aivora",
-        "width": 180,
-        "height": 180,
-        "minWidth": 180,
-        "minHeight": 180,
+        "width": 120,
+        "height": 120,
+        "minWidth": 120,
+        "minHeight": 120,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,

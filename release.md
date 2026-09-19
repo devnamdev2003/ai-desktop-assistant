@@ -381,3 +381,35 @@ Friend automatically gets update
 ```
 
 That is the production-grade workflow I'd recommend for Aivora.
+
+
+
+You change only some text:
+```
+"What can I help with dev?"
+        ↓
+"What can I help you with today?"
+```
+Then your release process is:
+```
+1. Change the text
+        ↓
+2. Increase version
+   0.1.1 → 0.1.2
+        ↓
+3. Build
+   npx tauri build
+        ↓
+4. New .exe + .sig generated
+        ↓
+5. Update latest.json
+        ↓
+6. Create GitHub Release v0.1.2
+        ↓
+7. Upload:
+   .exe
+   .sig
+   latest.json
+        ↓
+8. Publish
+```
