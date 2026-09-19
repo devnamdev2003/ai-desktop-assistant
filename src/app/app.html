@@ -263,11 +263,17 @@
               [class]="isMaximized() ? 'max-w-[88%] p-4 text-sm' : 'max-w-[92%] p-3 text-xs'"
               [class.border-red-500/30]="msg.isError" [class.bg-red-950/20]="msg.isError">
               <!-- Formatted HTML response -->
-              <div class="aivora-markdown leading-relaxed break-words" [class]="isMaximized() ? 'text-sm' : 'text-xs'"
-                [innerHTML]="msg.formattedText || msg.text"></div>
+              <div class="aivora-markdown leading-relaxed break-words" [class]="isMaximized() ? 'text-sm' : 'text-xs'">
+                <span [innerHTML]="msg.formattedText || msg.text"></span>
+                @if (msg.isStreaming) {
+                <span
+                  class="streaming-cursor w-1.5 h-3.5 ml-1 inline-block align-middle bg-purple-400 rounded-xs shadow-[0_0_8px_rgba(192,132,252,0.8)]"
+                  title="Generating..."></span>
+                }
+              </div>
 
               <!-- Footer actions (Copy button) -->
-              @if (!msg.isError) {
+              @if (!msg.isError && !msg.isStreaming) {
               <div
                 class="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-white/40">
                 <span>Aivora AI</span>
@@ -329,8 +335,10 @@
             [disabled]="isLoading()" placeholder="Ask Aivora..." autocomplete="off"
             class="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35 disabled:opacity-50" />
 
-          <button id="aivora-send-button" type="submit" [disabled]="isLoading() || !inputText().trim()"
-            aria-label="Send message" class="flex h-8 w-8 items-center justify-center rounded-xl
+          <button id="aivora-send-button" type="button" (click)="sendMessage()"
+            [disabled]="isLoading() || (!inputText().trim() && !isStreamingActive())"
+            [title]="isStreamingActive() ? 'Stop response' : 'Send message'"
+            [attr.aria-label]="isStreamingActive() ? 'Stop response' : 'Send message'" class="flex h-8 w-8 items-center justify-center rounded-xl
                      bg-purple-600 text-white shadow-md transition
                      hover:bg-purple-500 active:scale-95
                      disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-purple-600">
@@ -338,6 +346,10 @@
             <svg class="h-4 w-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            } @else if (isStreamingActive()) {
+            <svg class="h-3.5 w-3.5 fill-current text-white" viewBox="0 0 24 24">
+              <rect x="5" y="5" width="14" height="14" rx="2" />
             </svg>
             } @else {
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

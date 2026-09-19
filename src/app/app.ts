@@ -10,6 +10,7 @@ export interface ChatMessage {
   sender: 'user' | 'assistant';
   text: string;
   formattedText?: SafeHtml | string;
+  isStreaming?: boolean;
   timestamp: Date;
   isError?: boolean;
 }
@@ -111,6 +112,8 @@ export class App {
   copiedMessageId = signal<string | null>(null);
   errorMessage = signal<string | null>(null);
   showOrbContextMenu = signal(false);
+  isStreamingActive = signal(false);
+  private activeStreamTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Dynamically retrieves the active Tauri window if running in Tauri desktop,
@@ -307,10 +310,26 @@ export class App {
   }
 
   clearChat(): void {
+    if (this.activeStreamTimer) {
+      clearTimeout(this.activeStreamTimer);
+      this.activeStreamTimer = null;
+    }
+    this.isStreamingActive.set(false);
     this.messages.set([]);
     this.errorMessage.set(null);
     this.inputText.set('');
     setTimeout(() => this.chatInputElement?.nativeElement?.focus(), 50);
+  }
+
+  cancelStreaming(): void {
+    if (this.activeStreamTimer) {
+      clearTimeout(this.activeStreamTimer);
+      this.activeStreamTimer = null;
+    }
+    this.isStreamingActive.set(false);
+    this.messages.update((msgs) =>
+      msgs.map((m) => (m.isStreaming ? { ...m, isStreaming: false } : m))
+    );
   }
 
   async copyMessage(msg: ChatMessage): Promise<void> {
@@ -328,6 +347,11 @@ export class App {
   }
 
   async sendMessage(customText?: string): Promise<void> {
+    if (this.isStreamingActive()) {
+      this.cancelStreaming();
+      return;
+    }
+
     const questionText = (customText ?? this.inputText()).trim();
     if (!questionText || this.isLoading()) {
       return;
@@ -351,14 +375,8 @@ export class App {
 
     try {
       const answer = await this.queryAi(questionText);
-      const assistantMessage: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        sender: 'assistant',
-        text: answer,
-        formattedText: this.formatAnswer(answer),
-        timestamp: new Date(),
-      };
-      this.messages.update((list) => [...list, assistantMessage]);
+      this.isLoading.set(false);
+      await this.streamAssistantResponse(answer);
     } catch (err: unknown) {
       const errText = err instanceof Error ? err.message : 'Failed to communicate with AI';
       this.errorMessage.set(errText);
@@ -378,6 +396,87 @@ export class App {
       this.scrollToBottom();
       setTimeout(() => this.chatInputElement?.nativeElement?.focus(), 50);
     }
+  }
+
+  /**
+   * Streams the assistant's answer chunk-by-chunk to create a natural typing effect.
+   */
+  private async streamAssistantResponse(fullText: string): Promise<void> {
+    const assistantId = `assistant-${Date.now()}`;
+    const initialMessage: ChatMessage = {
+      id: assistantId,
+      sender: 'assistant',
+      text: '',
+      formattedText: '',
+      isStreaming: true,
+      timestamp: new Date(),
+    };
+
+    this.messages.update((prev) => [...prev, initialMessage]);
+    this.isStreamingActive.set(true);
+    this.scrollToBottom();
+
+    return new Promise<void>((resolve) => {
+      let currentIndex = 0;
+      const totalLength = fullText.length;
+
+      const getChunkSize = (): number => {
+        if (totalLength > 1200) {
+          return Math.floor(Math.random() * 8) + 8;
+        } else if (totalLength > 400) {
+          return Math.floor(Math.random() * 5) + 4;
+        }
+        return Math.floor(Math.random() * 3) + 2;
+      };
+
+      const tick = () => {
+        if (currentIndex < totalLength) {
+          const remaining = totalLength - currentIndex;
+          const step = Math.min(getChunkSize(), remaining);
+          currentIndex += step;
+
+          const currentText = fullText.slice(0, currentIndex);
+          const formatted = this.formatAnswer(currentText);
+          const isDone = currentIndex >= totalLength;
+
+          this.messages.update((msgs) =>
+            msgs.map((m) =>
+              m.id === assistantId
+                ? {
+                  ...m,
+                  text: currentText,
+                  formattedText: formatted,
+                  isStreaming: !isDone,
+                }
+                : m
+            )
+          );
+
+          this.scrollToBottom();
+
+          if (!isDone) {
+            const lastChar = currentText.slice(-1);
+            let delay = 18;
+            if (['.', '!', '?', '\n'].includes(lastChar)) {
+              delay = 45;
+            } else if ([',', ';', ':'].includes(lastChar)) {
+              delay = 28;
+            }
+            this.activeStreamTimer = setTimeout(tick, delay);
+          } else {
+            this.isStreamingActive.set(false);
+            this.activeStreamTimer = null;
+            resolve();
+          }
+        } else {
+          this.isStreamingActive.set(false);
+          this.activeStreamTimer = null;
+          resolve();
+        }
+      };
+
+      this.activeStreamTimer = setTimeout(tick, 15);
+    });
   }
 
   private async queryAi(question: string): Promise<string> {
