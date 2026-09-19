@@ -1,0 +1,10 @@
+{
+  "/api/ai": {
+    "target": "https://fastapi-gemini-rag.vercel.app",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/api/ai": "/ai"
+    }
+  }
+}

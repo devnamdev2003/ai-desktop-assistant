@@ -1,4 +1,4 @@
-<div class="flex h-screen w-screen items-center justify-center">
+<div class="flex h-screen w-screen items-center justify-center select-none">
 
   <!-- ========================= -->
   <!-- COLLAPSED ORB -->
@@ -9,9 +9,11 @@
       class="flex h-screen w-screen items-center justify-center"
     >
       <button
+        id="aivora-orb-button"
         type="button"
         (mousedown)="startOrbInteraction($event)"
         (click)="handleOrbClick()"
+        aria-label="Open Aivora AI Assistant"
         class="group relative flex h-32 w-32 cursor-pointer
                items-center justify-center
                rounded-full border-0 bg-transparent outline-none"
@@ -33,7 +35,7 @@
                  shadow-[0_0_20px_rgba(150,120,255,0.9),0_0_45px_rgba(100,70,255,0.5)]
                  transition-transform duration-300
                  group-hover:scale-110
-                 group-active:scale-95"
+                 group-active:scale-95 animate-pulse"
         ></div>
 
       </button>
@@ -47,132 +49,298 @@
 
   @if (isExpanded) {
     <div
-      class="h-[500px] w-[400px]
+      id="aivora-expanded-panel"
+      class="flex flex-col h-[540px] w-[420px] max-w-[95vw] max-h-[92vh]
              overflow-hidden rounded-3xl
              border border-white/10
-             bg-slate-950/90
-             shadow-[0_0_60px_rgba(100,70,255,0.25)]
-             backdrop-blur-xl"
+             bg-slate-950/95
+             shadow-[0_0_60px_rgba(100,70,255,0.28)]
+             backdrop-blur-2xl transition-all"
     >
 
       <!-- HEADER / DRAG AREA -->
 
       <div
+        id="aivora-header-bar"
         (mousedown)="startDragging($event)"
         class="flex cursor-move select-none
                items-center justify-between
-               px-6 py-5"
+               border-b border-white/5
+               px-5 py-3.5 shrink-0 bg-slate-900/40"
       >
 
-        <div>
-          <div class="text-lg font-semibold tracking-wide text-white">
-            Aivora
-          </div>
+        <div class="flex items-center gap-2.5">
+          <!-- Mini glowing orb -->
+          <div
+            class="relative flex h-6 w-6 items-center justify-center rounded-full
+                   bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]
+                   shadow-[0_0_12px_rgba(140,90,255,0.8)]"
+          ></div>
 
-          <div class="text-xs text-white/40">
-            Your desktop AI agent
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-sm font-semibold tracking-wide text-white">Aivora</span>
+              <span class="inline-flex items-center rounded-full bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-medium text-purple-300">AI</span>
+            </div>
+            <div class="text-[11px] text-white/45 flex items-center gap-1">
+              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+              <span>Ready & connected</span>
+            </div>
           </div>
         </div>
 
 
-        <!-- CLOSE BUTTON -->
+        <!-- HEADER ACTIONS -->
 
-        <button
-          type="button"
-          (mousedown)="$event.stopPropagation()"
-          (click)="toggleAssistant()"
-          class="flex h-8 w-8
-                 items-center justify-center
-                 rounded-full
-                 bg-white/5
-                 text-white/60
-                 transition
-                 hover:bg-white/10
-                 hover:text-white"
-        >
-          ×
-        </button>
+        <div class="flex items-center gap-1.5">
+          @if (messages().length > 0) {
+            <button
+              id="clear-chat-btn"
+              type="button"
+              (mousedown)="$event.stopPropagation()"
+              (click)="clearChat()"
+              title="Clear conversation"
+              aria-label="Clear conversation"
+              class="flex h-7 w-7 items-center justify-center rounded-full
+                     bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white"
+            >
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          }
+
+          <!-- CLOSE BUTTON -->
+          <button
+            id="close-assistant-btn"
+            type="button"
+            (mousedown)="$event.stopPropagation()"
+            (click)="toggleAssistant()"
+            title="Collapse into orb"
+            aria-label="Close Aivora assistant"
+            class="flex h-7 w-7
+                   items-center justify-center
+                   rounded-full
+                   bg-white/5
+                   text-white/60
+                   transition
+                   hover:bg-white/10
+                   hover:text-white"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
       </div>
 
 
-      <!-- MAIN CONTENT -->
+      <!-- MAIN SCROLLABLE CONTENT AREA -->
 
       <div
-        class="flex h-[400px]
-               flex-col
-               items-center
-               justify-center
-               px-8"
+        #messagesContainer
+        id="messages-scroll-area"
+        class="flex-1 overflow-y-auto px-5 py-4 space-y-4 select-text"
       >
 
-        <!-- Aivora orb -->
+        <!-- EMPTY STATE (WELCOME SCREEN) -->
+        @if (messages().length === 0) {
+          <div class="flex flex-col items-center justify-center h-full py-4 text-center">
 
-        <div
-          class="mb-8 flex h-20 w-20
-                 items-center justify-center
-                 rounded-full
-                 bg-purple-500/10
-                 shadow-[0_0_40px_rgba(120,80,255,0.3)]"
-        >
-          <div
-            class="h-9 w-9 rounded-full
-                   bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]"
-          ></div>
-        </div>
+            <!-- Glowing Aivora orb -->
+            <div
+              class="mb-5 flex h-20 w-20
+                     items-center justify-center
+                     rounded-full
+                     bg-purple-500/10
+                     shadow-[0_0_40px_rgba(120,80,255,0.35)]"
+            >
+              <div
+                class="h-9 w-9 rounded-full
+                       bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]
+                       shadow-[0_0_15px_rgba(150,110,255,0.7)]"
+              ></div>
+            </div>
+
+            <!-- Title -->
+            <h2 class="text-lg font-medium text-white">
+              What can I help with dev?
+            </h2>
+
+            <!-- Description -->
+            <p class="mt-1.5 text-xs text-white/50 max-w-[280px]">
+              Ask Aivora any programming, research, or reasoning question.
+            </p>
+
+            <!-- Suggested prompt chips -->
+            <div class="mt-6 flex flex-col gap-2 w-full max-w-[320px]">
+              <div class="text-[11px] font-medium text-white/40 uppercase tracking-wider text-left pl-1">
+                Suggested questions
+              </div>
+              @for (suggestion of suggestedQuestions; track suggestion) {
+                <button
+                  type="button"
+                  (click)="useSuggestion(suggestion)"
+                  class="flex items-center justify-between text-left text-xs text-white/80
+                         bg-white/5 hover:bg-purple-500/15 hover:border-purple-500/30
+                         border border-white/5 rounded-xl px-3.5 py-2.5 transition group"
+                >
+                  <span class="truncate">{{ suggestion }}</span>
+                  <span class="text-purple-400 text-sm ml-2 group-hover:translate-x-0.5 transition-transform">→</span>
+                </button>
+              }
+            </div>
+
+          </div>
+        }
+
+        <!-- CONVERSATION LIST -->
+        @if (messages().length > 0) {
+          <div class="space-y-3.5">
+            @for (msg of messages(); track msg.id) {
+              <!-- USER MESSAGE -->
+              @if (msg.sender === 'user') {
+                <div class="flex justify-end">
+                  <div
+                    class="max-w-[85%] rounded-2xl rounded-tr-sm
+                           bg-gradient-to-br from-purple-600 to-indigo-700
+                           px-4 py-2.5 text-sm text-white shadow-lg"
+                  >
+                    <p class="whitespace-pre-wrap leading-relaxed">{{ msg.text }}</p>
+                  </div>
+                </div>
+              }
+
+              <!-- ASSISTANT MESSAGE -->
+              @if (msg.sender === 'assistant') {
+                <div class="flex items-start gap-2.5">
+                  <!-- Mini avatar -->
+                  <div
+                    class="h-6 w-6 rounded-full shrink-0 mt-1
+                           bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]
+                           shadow-[0_0_10px_rgba(150,110,255,0.6)]"
+                  ></div>
+
+                  <!-- Assistant bubble -->
+                  <div
+                    class="group relative max-w-[88%] rounded-2xl rounded-tl-sm
+                           border border-white/10 bg-white/5 p-3.5 text-sm text-white/90 shadow-md"
+                    [class.border-red-500/30]="msg.isError"
+                    [class.bg-red-950/20]="msg.isError"
+                  >
+                    <!-- Formatted HTML response -->
+                    <div
+                      class="prose prose-invert text-xs leading-relaxed break-words"
+                      [innerHTML]="msg.formattedText || msg.text"
+                    ></div>
+
+                    <!-- Footer actions (Copy button) -->
+                    @if (!msg.isError) {
+                      <div class="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-white/40">
+                        <span>Aivora AI</span>
+                        <button
+                          type="button"
+                          (click)="copyMessage(msg)"
+                          class="flex items-center gap-1 text-white/50 hover:text-white transition px-1.5 py-0.5 rounded hover:bg-white/5"
+                        >
+                          @if (copiedMessageId() === msg.id) {
+                            <svg class="h-3 w-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span class="text-emerald-400">Copied</span>
+                          } @else {
+                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <span>Copy</span>
+                          }
+                        </button>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            }
+
+            <!-- THINKING INDICATOR -->
+            @if (isLoading()) {
+              <div class="flex items-start gap-2.5">
+                <div
+                  class="h-6 w-6 rounded-full shrink-0 mt-1
+                         bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]
+                         shadow-[0_0_10px_rgba(150,110,255,0.6)] animate-pulse"
+                ></div>
+                <div
+                  class="flex items-center gap-2 rounded-2xl rounded-tl-sm
+                         border border-purple-500/20 bg-purple-950/20 px-3.5 py-2.5 text-xs text-purple-200"
+                >
+                  <span class="text-white/70">Aivora is thinking</span>
+                  <span class="flex gap-1">
+                    <span class="h-1.5 w-1.5 rounded-full bg-purple-400 animate-bounce"></span>
+                    <span class="h-1.5 w-1.5 rounded-full bg-purple-400 animate-bounce [animation-delay:0.2s]"></span>
+                    <span class="h-1.5 w-1.5 rounded-full bg-purple-400 animate-bounce [animation-delay:0.4s]"></span>
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+      </div>
 
 
-        <!-- Title -->
+      <!-- BOTTOM INPUT BAR -->
 
-        <h2 class="text-xl font-medium text-white">
-          What can I help with dev?
-        </h2>
-
-
-        <!-- Description -->
-
-        <p class="mt-2 text-center text-sm text-white/40">
-          Ask Aivora about what you're doing on your screen.
-        </p>
-
-
-        <!-- Input -->
-
-        <div
-          class="mt-8 flex w-full
-                 items-center gap-2
-                 rounded-2xl
-                 border border-white/10
-                 bg-white/5
-                 px-4 py-3"
+      <div
+        id="aivora-input-bar"
+        class="border-t border-white/10 bg-slate-950/80 p-3.5 shrink-0"
+      >
+        <form
+          (submit)="$event.preventDefault(); sendMessage()"
+          class="flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3.5 py-2.5 focus-within:border-purple-500/50 focus-within:bg-white/[0.07] transition"
         >
 
           <input
+            #chatInput
+            id="aivora-chat-input"
             type="text"
+            [value]="inputText()"
+            (input)="onInputChange($event)"
+            [disabled]="isLoading()"
             placeholder="Ask Aivora..."
-            class="min-w-0 flex-1
-                   bg-transparent
-                   text-sm
-                   text-white
-                   outline-none
-                   placeholder:text-white/30"
+            autocomplete="off"
+            class="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35 disabled:opacity-50"
           />
 
           <button
-            type="button"
-            class="rounded-xl
-                   bg-purple-500/20
-                   px-3 py-2
-                   text-sm
-                   text-purple-200
-                   transition
-                   hover:bg-purple-500/30"
+            id="aivora-send-button"
+            type="submit"
+            [disabled]="isLoading() || !inputText().trim()"
+            aria-label="Send message"
+            class="flex h-8 w-8 items-center justify-center rounded-xl
+                   bg-purple-600 text-white shadow-md transition
+                   hover:bg-purple-500 active:scale-95
+                   disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-purple-600"
           >
-            →
+            @if (isLoading()) {
+              <svg class="h-4 w-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+            } @else {
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            }
           </button>
 
-        </div>
+        </form>
 
+        <div class="mt-1.5 flex items-center justify-between px-1 text-[10px] text-white/30">
+          <span>FastAPI Gemini RAG</span>
+          <span>Enter to send</span>
+        </div>
       </div>
 
     </div>
