@@ -27,3 +27,295 @@ body {
 #messages-scroll-area::-webkit-scrollbar-thumb:hover {
   background: rgba(168, 85, 247, 0.4);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Aivora AI Markdown Formatting                                              */
+/* -------------------------------------------------------------------------- */
+.aivora-markdown {
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.625;
+  word-break: break-word;
+}
+
+.aivora-markdown p {
+  margin-top: 0.45rem;
+  margin-bottom: 0.45rem;
+}
+
+.aivora-markdown p:first-child {
+  margin-top: 0;
+}
+
+.aivora-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+/* Headers */
+.aivora-markdown h1,
+.aivora-markdown h2,
+.aivora-markdown h3,
+.aivora-markdown h4 {
+  color: #ffffff;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-top: 1rem;
+  margin-bottom: 0.45rem;
+}
+
+.aivora-markdown h1:first-child,
+.aivora-markdown h2:first-child,
+.aivora-markdown h3:first-child {
+  margin-top: 0;
+}
+
+.aivora-markdown h1 {
+  font-size: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding-bottom: 0.35rem;
+  letter-spacing: -0.02em;
+}
+
+.aivora-markdown h2 {
+  font-size: 1.1rem;
+  color: #f3e8ff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.25rem;
+}
+
+.aivora-markdown h3 {
+  font-size: 0.975rem;
+  color: #e9d5ff;
+}
+
+.aivora-markdown h4 {
+  font-size: 0.875rem;
+  color: #d8b4fe;
+}
+
+/* Typography elements */
+.aivora-markdown strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.aivora-markdown em {
+  color: #e9d5ff;
+  font-style: italic;
+}
+
+.aivora-markdown s,
+.aivora-markdown del {
+  color: rgba(255, 255, 255, 0.45);
+  text-decoration: line-through;
+}
+
+/* Lists */
+.aivora-markdown ul {
+  list-style-type: disc;
+  margin-left: 1.25rem;
+  margin-top: 0.4rem;
+  margin-bottom: 0.4rem;
+  padding-left: 0.25rem;
+}
+
+.aivora-markdown ol {
+  list-style-type: decimal;
+  margin-left: 1.25rem;
+  margin-top: 0.4rem;
+  margin-bottom: 0.4rem;
+  padding-left: 0.25rem;
+}
+
+.aivora-markdown li {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  padding-left: 0.15rem;
+  line-height: 1.55;
+}
+
+.aivora-markdown li > p {
+  margin: 0;
+}
+
+.aivora-markdown li::marker {
+  color: #c084fc;
+}
+
+/* Blockquotes */
+.aivora-markdown blockquote {
+  border-left: 3px solid #a855f7;
+  padding-left: 0.85rem;
+  margin-top: 0.6rem;
+  margin-bottom: 0.6rem;
+  color: rgba(233, 213, 255, 0.9);
+  background: rgba(168, 85, 247, 0.08);
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  font-style: italic;
+}
+
+/* Links */
+.aivora-markdown a {
+  color: #c084fc;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s ease;
+}
+
+.aivora-markdown a:hover {
+  color: #e9d5ff;
+}
+
+/* Dividers */
+.aivora-markdown hr {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  margin-top: 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+/* Inline Code */
+.aivora-markdown :not(pre) > code {
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  color: #f3e8ff;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.375rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85em;
+  word-break: break-word;
+}
+
+/* Tables */
+.aivora-markdown table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin-top: 0.65rem;
+  margin-bottom: 0.65rem;
+  font-size: 0.8125rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.aivora-markdown th {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.45rem 0.75rem;
+  font-weight: 600;
+  color: #ffffff;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+}
+
+.aivora-markdown td {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.aivora-markdown tr:last-child td {
+  border-bottom: none;
+}
+
+.aivora-markdown tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Code Blocks Container */
+.code-block {
+  margin-top: 0.65rem;
+  margin-bottom: 0.65rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  background: #090d16;
+  box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.8rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.code-block-lang {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #d8b4fe;
+}
+
+.copy-code-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.copy-code-btn:hover {
+  color: #ffffff;
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.35);
+}
+
+.copy-code-btn.copied {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 0.75rem 0.95rem;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: #e2e8f0;
+  white-space: pre;
+}
+
+.code-block pre code {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  font-family: inherit !important;
+}
+
+.code-block pre::-webkit-scrollbar {
+  height: 4px;
+}
+
+.code-block pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.code-block pre::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+
+.code-block pre::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.5);
+}
+

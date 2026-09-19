@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Aivora",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "com.devnamdev.aivora",
   "build": {
     "frontendDist": "../dist/frontend/browser",
@@ -21,7 +21,7 @@
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
-        "resizable": false,
+        "resizable": true,
         "center": true,
         "skipTaskbar": true,
         "shadow": false

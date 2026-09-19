@@ -8,6 +8,28 @@
     "core:window:allow-set-size",
     "core:window:allow-center",
     "core:window:allow-start-dragging",
-    "updater:default"
+    "updater:default",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-is-maximized",
+    "core:window:allow-close",
+    "core:window:allow-destroy",
+    "core:window:allow-hide",
+    "core:window:allow-minimize",
+    "core:window:allow-set-resizable",
+    "core:window:allow-set-focus",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-shadow",
+    "core:window:allow-set-decorations",
+    "core:window:allow-set-min-size",
+    "core:window:allow-set-max-size",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://fastapi-gemini-rag.vercel.app/*" },
+        { "url": "http://localhost:*/*" }
+      ]
+    }
   ]
 }

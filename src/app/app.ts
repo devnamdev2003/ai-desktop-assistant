@@ -1,12 +1,14 @@
-import { Component, ElementRef, HostListener, signal, ViewChild } from '@angular/core';
-import { getCurrentWindow, LogicalSize } from '@tauri-apps/api/window';
-import { check } from '@tauri-apps/plugin-updater';
+import { Component, ElementRef, inject, signal, ViewChild } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { isTauri } from '@tauri-apps/api/core';
+import { getCurrentWindow, LogicalSize, Window } from '@tauri-apps/api/window';
+import { marked } from 'marked';
 
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'assistant';
   text: string;
-  formattedText?: string;
+  formattedText?: SafeHtml | string;
   timestamp: Date;
   isError?: boolean;
 }
@@ -16,66 +18,185 @@ interface ApiResponse {
   answer: string;
 }
 
-interface AppWindow {
-  setSize(size: LogicalSize): Promise<void>;
-  center(): Promise<void>;
-  startDragging(): Promise<void>;
+export interface PromptSuggestion {
+  title: string;
+  desc: string;
+  prompt: string;
+  tag: string;
 }
 
-function getAppWindow(): AppWindow {
-  if (
-    typeof window !== 'undefined' &&
-    Boolean((window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__)
-  ) {
-    try {
-      return getCurrentWindow();
-    } catch {
-      // Fallback if Tauri internals cannot be initialized
-    }
-  }
-
-  return {
-    async setSize(_size: LogicalSize): Promise<void> { },
-    async center(): Promise<void> { },
-    async startDragging(): Promise<void> { },
-  };
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
+
+// Configure marked with GitHub Flavored Markdown, line breaks, and enhanced code blocks
+marked.use({
+  gfm: true,
+  breaks: true,
+  renderer: {
+    code({ text, lang }: { text: string; lang?: string }): string {
+      const language = (lang || '').trim();
+      const displayLang = language || 'code';
+      const encodedCode = encodeURIComponent(text);
+      const escapedCode = escapeHtml(text);
+
+      return (
+        `<div class="code-block" data-code-block="true">` +
+        `<div class="code-block-header">` +
+        `<span class="code-block-lang">${escapeHtml(displayLang)}</span>` +
+        `<button type="button" class="copy-code-btn" data-code="${encodedCode}">` +
+        `<svg class="w-3 h-3 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">` +
+        `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />` +
+        `</svg>` +
+        `<span class="copy-label pointer-events-none">Copy</span>` +
+        `</button>` +
+        `</div>` +
+        `<pre><code>${escapedCode}</code></pre>` +
+        `</div>`
+      );
+    },
+    link({ href, title, text }: { href: string; title?: string | null; text: string }): string {
+      const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
+      return `<a href="${href}" target="_blank" rel="noopener noreferrer"${titleAttr}>${text}</a>`;
+    },
+  },
+});
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.css',
+  host: {
+    '(document:mousemove)': 'handleMouseMove($event)',
+    '(document:mouseup)': 'handleMouseUp()',
+    '(click)': 'handleGlobalClick($event)',
+  },
 })
 export class App {
-
-  constructor() {
-    this.checkForUpdates();
-  }
-
-  async checkForUpdates(): Promise<void> {
-    const update = await check();
-
-    if (update) {
-      await update.downloadAndInstall();
-    }
-  }
-
-  private readonly window: AppWindow = getAppWindow();
+  private readonly sanitizer = inject(DomSanitizer);
 
   @ViewChild('messagesContainer') private messagesContainer?: ElementRef<HTMLDivElement>;
   @ViewChild('chatInput') private chatInputElement?: ElementRef<HTMLInputElement>;
 
   isExpanded = false;
+  isMaximized = signal(false);
   inputText = signal('');
   isLoading = signal(false);
   messages = signal<ChatMessage[]>([]);
   copiedMessageId = signal<string | null>(null);
   errorMessage = signal<string | null>(null);
 
-  suggestedQuestions = [
-    'What can you help me with?',
-    'Explain quantum computing simply',
-    'Write a Python script to reverse a string',
+  /**
+   * Dynamically retrieves the active Tauri window if running in Tauri desktop,
+   * avoiding premature initialization issues when Angular bootstraps.
+   */
+  private getTauriWindow(): Window | null {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    try {
+      if (
+        isTauri() ||
+        Boolean((window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__) ||
+        Boolean((window as unknown as { isTauri?: boolean }).isTauri)
+      ) {
+        return getCurrentWindow();
+      }
+    } catch (err) {
+      console.warn('Unable to get Tauri window instance:', err);
+    }
+    return null;
+  }
+
+  /**
+   * Safely execute an operation on the Tauri desktop window with error handling
+   */
+  private async safeWindowOp(fn: (win: Window) => Promise<void>): Promise<void> {
+    const win = this.getTauriWindow();
+    if (!win) {
+      return;
+    }
+    try {
+      await fn(win);
+    } catch (err) {
+      console.warn('Tauri window operation failed:', err);
+    }
+  }
+
+  isTauriEnvironment(): boolean {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    return Boolean(
+      isTauri() ||
+        (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ ||
+        (window as unknown as { isTauri?: boolean }).isTauri
+    );
+  }
+
+  compactSuggestions: PromptSuggestion[] = [
+    {
+      title: 'Explain quantum computing',
+      desc: 'Break down complex physics concepts simply',
+      prompt: 'Explain quantum computing in simple terms with an intuitive analogy.',
+      tag: 'Science',
+    },
+    {
+      title: 'Reverse a string in Python',
+      desc: 'Provide clear code examples and explanations',
+      prompt: 'Write a Python script to reverse a string with multiple practical methods.',
+      tag: 'Code',
+    },
+    {
+      title: 'What can you help me with?',
+      desc: 'Discover Aivora AI capabilities and tools',
+      prompt: 'What can you help me with as an AI assistant?',
+      tag: 'Help',
+    },
+  ];
+
+  fullSuggestions: PromptSuggestion[] = [
+    {
+      title: 'Explain quantum computing',
+      desc: 'Break down complex physics concepts simply',
+      prompt: 'Explain quantum computing in simple terms with an intuitive analogy.',
+      tag: 'Science',
+    },
+    {
+      title: 'Reverse a string in Python',
+      desc: 'Provide clear code examples and explanations',
+      prompt: 'Write a Python script to reverse a string with multiple practical methods.',
+      tag: 'Code',
+    },
+    {
+      title: 'Debug async JavaScript',
+      desc: 'Fix common Promise and async/await pitfalls',
+      prompt: 'Explain common Promise and async/await pitfalls in JavaScript with code solutions.',
+      tag: 'Debug',
+    },
+    {
+      title: 'Design a RESTful API',
+      desc: 'Clean endpoints and schema architecture',
+      prompt: 'What are the best practices for designing a clean, scalable RESTful API?',
+      tag: 'API',
+    },
+    {
+      title: 'Optimize SQL queries',
+      desc: 'Indexing strategies and execution plans',
+      prompt: 'How do I optimize slow SQL database queries using indexes and execution plans?',
+      tag: 'Database',
+    },
+    {
+      title: 'What can you help me with?',
+      desc: 'Discover Aivora AI capabilities and tools',
+      prompt: 'What can you help me with as an AI assistant?',
+      tag: 'Help',
+    },
   ];
 
   // Orb click/drag state
@@ -89,16 +210,70 @@ export class App {
     this.isExpanded = !this.isExpanded;
 
     if (this.isExpanded) {
-      await this.window.setSize(new LogicalSize(440, 560));
-      await this.window.center();
+      await this.safeWindowOp(async (win) => {
+        try {
+          await win.setResizable(true);
+        } catch {}
+
+        if (this.isMaximized()) {
+          try {
+            await win.maximize();
+          } catch {
+            await win.setSize(new LogicalSize(1100, 750));
+            await win.center();
+          }
+        } else {
+          await win.setSize(new LogicalSize(440, 560));
+          await win.center();
+        }
+      });
+
       setTimeout(() => {
         this.chatInputElement?.nativeElement?.focus();
         this.scrollToBottom();
       }, 100);
     } else {
-      await this.window.setSize(new LogicalSize(180, 180));
-      await this.window.center();
+      await this.safeWindowOp(async (win) => {
+        if (this.isMaximized()) {
+          try {
+            await win.unmaximize();
+          } catch {}
+        }
+        await win.setSize(new LogicalSize(180, 180));
+        await win.center();
+      });
+      this.isMaximized.set(false);
     }
+  }
+
+  async toggleMaximize(): Promise<void> {
+    const nextState = !this.isMaximized();
+    this.isMaximized.set(nextState);
+
+    await this.safeWindowOp(async (win) => {
+      try {
+        await win.setResizable(true);
+      } catch {}
+
+      if (nextState) {
+        try {
+          await win.maximize();
+        } catch {
+          // In case desktop environment restricts borderless window maximize, expand to large size
+          await win.setSize(new LogicalSize(1100, 750));
+          await win.center();
+        }
+      } else {
+        try {
+          await win.unmaximize();
+        } catch {}
+        await win.setSize(new LogicalSize(440, 560));
+        await win.center();
+      }
+    });
+
+    this.scrollToBottom();
+    setTimeout(() => this.chatInputElement?.nativeElement?.focus(), 50);
   }
 
   onInputChange(event: Event): void {
@@ -170,7 +345,9 @@ export class App {
         id: `err-${Date.now()}`,
         sender: 'assistant',
         text: `Sorry, I couldn't reach the AI server (${errText}). Please try again.`,
-        formattedText: `Sorry, I couldn't reach the AI server (<em>${this.escapeHtml(errText)}</em>). Please check your connection and try again.`,
+        formattedText: this.sanitizer.bypassSecurityTrustHtml(
+          `Sorry, I couldn't reach the AI server (<em>${escapeHtml(errText)}</em>). Please check your connection and try again.`
+        ),
         timestamp: new Date(),
         isError: true,
       };
@@ -189,7 +366,29 @@ export class App {
       'Content-Type': 'application/json',
     };
 
-    // 1. Try proxied endpoint first (prevents browser CORS preflight blocks in dev/web preview)
+    // 1. If running inside Tauri desktop, try Tauri's native HTTP plugin first!
+    // This executes via Rust and bypasses all browser CORS restrictions and disallowed origin checks
+    if (this.isTauriEnvironment()) {
+      try {
+        const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+        const res = await tauriFetch('https://fastapi-gemini-rag.vercel.app/ai', {
+          method: 'POST',
+          headers,
+          body: payload,
+        });
+
+        if (res.ok) {
+          const data = (await res.json()) as ApiResponse;
+          if (data && typeof data.answer === 'string') {
+            return data.answer;
+          }
+        }
+      } catch (err) {
+        console.warn('Tauri native HTTP fetch attempt failed, trying fallback:', err);
+      }
+    }
+
+    // 2. Try proxied endpoint (dev server / preview proxy)
     try {
       const res = await fetch('/api/ai', {
         method: 'POST',
@@ -207,7 +406,7 @@ export class App {
       // Fall through to direct endpoint attempt
     }
 
-    // 2. Direct FastAPI Vercel endpoint fallback
+    // 3. Direct FastAPI Vercel endpoint fallback
     const directRes = await fetch('https://fastapi-gemini-rag.vercel.app/ai', {
       method: 'POST',
       headers,
@@ -226,47 +425,45 @@ export class App {
     throw new Error('No answer found in response');
   }
 
-  formatAnswer(text: string): string {
+  formatAnswer(text: string): SafeHtml {
     if (!text) return '';
-    let sanitized = this.escapeHtml(text);
-
-    // Code blocks ```language\ncode```
-    sanitized = sanitized.replace(
-      /```(?:[a-zA-Z0-9_-]+)?\n?([\s\S]*?)```/g,
-      '<pre class="my-2.5 overflow-x-auto rounded-xl border border-purple-500/20 bg-slate-900/90 p-3 font-mono text-xs text-purple-200"><code>$1</code></pre>'
-    );
-
-    // Inline code `code`
-    sanitized = sanitized.replace(
-      /`([^`]+)`/g,
-      '<code class="rounded bg-white/10 px-1.5 py-0.5 font-mono text-xs text-purple-300">$1</code>'
-    );
-
-    // Bold **text**
-    sanitized = sanitized.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-white">$1</strong>');
-
-    // Italics *text*
-    sanitized = sanitized.replace(/\*([^*]+)\*/g, '<em class="italic text-purple-200/90">$1</em>');
-
-    // Bullet points "- item" or "* item"
-    sanitized = sanitized.replace(/^(?:[-*])\s+(.+)$/gm, '<span class="inline-block mr-1 text-purple-400">•</span>$1');
-
-    // Numbered points "1. item"
-    sanitized = sanitized.replace(/^(\d+\.)\s+(.+)$/gm, '<span class="font-medium text-purple-300">$1</span> $2');
-
-    // Newlines to <br/>
-    sanitized = sanitized.replace(/\n/g, '<br/>');
-
-    return sanitized;
+    try {
+      const parsed = marked.parse(text, { async: false }) as string;
+      return this.sanitizer.bypassSecurityTrustHtml(parsed);
+    } catch (e) {
+      console.warn('Error parsing markdown:', e);
+      return this.sanitizer.bypassSecurityTrustHtml(escapeHtml(text));
+    }
   }
 
-  private escapeHtml(str: string): string {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+  handleGlobalClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const btn = target.closest('.copy-code-btn') as HTMLButtonElement | null;
+    if (btn) {
+      event.preventDefault();
+      event.stopPropagation();
+      const codeAttr = btn.getAttribute('data-code');
+      if (codeAttr) {
+        try {
+          const rawCode = decodeURIComponent(codeAttr);
+          navigator.clipboard.writeText(rawCode).then(() => {
+            btn.classList.add('copied');
+            const label = btn.querySelector('.copy-label');
+            if (label) {
+              label.textContent = 'Copied!';
+            }
+            setTimeout(() => {
+              btn.classList.remove('copied');
+              if (label) {
+                label.textContent = 'Copy';
+              }
+            }, 2000);
+          });
+        } catch (err) {
+          console.warn('Clipboard write failed:', err);
+        }
+      }
+    }
   }
 
   private scrollToBottom(): void {
@@ -289,7 +486,9 @@ export class App {
       return;
     }
 
-    await this.window.startDragging();
+    await this.safeWindowOp(async (win) => {
+      await win.startDragging();
+    });
   }
 
   // -----------------------------
@@ -311,7 +510,6 @@ export class App {
     this.orbStartY = event.clientY;
   }
 
-  @HostListener('document:mousemove', ['$event'])
   async handleMouseMove(event: MouseEvent): Promise<void> {
     if (!this.orbMouseDown || this.orbDragging) {
       return;
@@ -326,11 +524,12 @@ export class App {
       this.orbDragging = true;
       this.suppressNextOrbClick = true;
 
-      await this.window.startDragging();
+      await this.safeWindowOp(async (win) => {
+        await win.startDragging();
+      });
     }
   }
 
-  @HostListener('document:mouseup')
   handleMouseUp(): void {
     this.orbMouseDown = false;
   }

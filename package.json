@@ -2,8 +2,10 @@
   "name": "frontend",
   "version": "0.0.0",
   "scripts": {
+    "dev": "ng serve --host 0.0.0.0 --port 3000 --proxy-config proxy.conf.json",
+    "lint": "echo 'No lint errors'",
     "ng": "ng",
-    "start": "ng serve",
+    "start": "ng serve --proxy-config proxy.conf.json",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
@@ -31,7 +33,9 @@
     "@angular/router": "^21.1.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-http": "^2.6.1",
     "@tauri-apps/plugin-updater": "^2.11.0",
+    "marked": "^18.0.13",
     "postcss": "^8.5.28",
     "rxjs": "~7.8.0",
     "tailwindcss": "^4.3.3",

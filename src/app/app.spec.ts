@@ -20,4 +20,22 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('#aivora-orb-button')).toBeTruthy();
   });
+
+  it('should toggle maximize state', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    expect(app.isMaximized()).toBe(false);
+    await app.toggleMaximize();
+    expect(app.isMaximized()).toBe(true);
+    await app.toggleMaximize();
+    expect(app.isMaximized()).toBe(false);
+  });
+
+  it('should format markdown and code blocks correctly', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    const md = '# Hello World\n\nThis is **bold** and `code`.\n\n```python\nprint("hi")\n```';
+    const formatted = app.formatAnswer(md);
+    expect(formatted).toBeTruthy();
+  });
 });
