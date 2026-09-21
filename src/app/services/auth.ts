@@ -162,7 +162,7 @@ export class AuthService {
    */
   async checkBackendHealth(): Promise<boolean> {
     try {
-      const res = await fetch('/api/v1/health');
+      const res = await fetch('https://ai-desktop-api.vercel.app/api/v1/health');
       if (res.ok) {
         this.backendHealthy.set(true);
         return true;
@@ -170,7 +170,7 @@ export class AuthService {
     } catch {
       // Fallback direct port check if proxy not used
       try {
-        const directRes = await fetch('http://localhost:8000/api/v1/health');
+        const directRes = await fetch('https://ai-desktop-api.vercel.app/api/v1/health');
         if (directRes.ok) {
           this.backendHealthy.set(true);
           return true;
@@ -248,12 +248,12 @@ export class AuthService {
     this.cancelBrowserAuth();
 
     try {
-      let endpoint = '/api/v1/auth/google/url?is_desktop=true';
+      let endpoint = 'https://ai-desktop-api.vercel.app/api/v1/auth/google/url?is_desktop=true';
       let res = await fetch(endpoint).catch(() => null);
 
       if (!res || !res.ok) {
         // Try direct backend port 8000
-        res = await fetch('http://localhost:8000/api/v1/auth/google/url?is_desktop=true');
+        res = await fetch('https://ai-desktop-api.vercel.app/api/v1/auth/google/url?is_desktop=true');
       }
 
       if (!res.ok) {
@@ -328,11 +328,11 @@ export class AuthService {
       }
 
       try {
-        let endpoint = `/api/v1/auth/google/check-desktop-session?session_id=${encodeURIComponent(sessionId)}`;
+        let endpoint = `https://ai-desktop-api.vercel.app/api/v1/auth/google/check-desktop-session?session_id=${encodeURIComponent(sessionId)}`;
         let res = await fetch(endpoint).catch(() => null);
 
         if (!res || !res.ok) {
-          res = await fetch(`http://localhost:8000${endpoint}`).catch(() => null);
+          res = await fetch(`{endpoint}`).catch(() => null);
         }
 
         if (res && res.ok) {
@@ -378,12 +378,12 @@ export class AuthService {
         }
       }
 
-      const res = await fetch('/api/v1/auth/google/verify', {
+      const res = await fetch('https://ai-desktop-api.vercel.app/api/v1/auth/google/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           code,
-          redirect_uri: 'http://localhost:8000/api/v1/auth/google/callback',
+          redirect_uri: 'https://ai-desktop-api.vercel.app/api/v1/auth/google/callback',
         }),
       });
 
@@ -413,7 +413,7 @@ export class AuthService {
     this.authError.set(null);
 
     try {
-      const res = await fetch('/api/v1/auth/google/verify', {
+      const res = await fetch('https://ai-desktop-api.vercel.app/api/v1/auth/google/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id_token: idToken }),
@@ -446,7 +446,7 @@ export class AuthService {
     }
 
     try {
-      const res = await fetch('/api/v1/auth/refresh', {
+      const res = await fetch('https://ai-desktop-api.vercel.app/api/v1/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: refreshToken }),
@@ -474,7 +474,7 @@ export class AuthService {
     if (!token) return null;
 
     try {
-      const res = await fetch('/api/v1/auth/me', {
+      const res = await fetch('https://ai-desktop-api.vercel.app/api/v1/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -502,7 +502,7 @@ export class AuthService {
   async logout(): Promise<void> {
     const refreshToken = this.refreshTokenValue;
     if (refreshToken) {
-      fetch('/api/v1/auth/logout', {
+      fetch('https://ai-desktop-api.vercel.app/api/v1/auth/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: refreshToken }),

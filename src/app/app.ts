@@ -739,7 +739,7 @@ export class App {
     // Query authenticated FastAPI backend endpoint exclusively
     let res: Response | null = null;
     try {
-      res = await fetch('/api/v1/chat', {
+      res = await fetch('https://ai-desktop-api.vercel.app/api/v1/chat', {
         method: 'POST',
         headers: authHeaders,
         body: payload,
@@ -747,7 +747,7 @@ export class App {
     } catch {
       // Direct backend port check if dev server proxy not running
       try {
-        res = await fetch('http://localhost:8000/api/v1/chat', {
+        res = await fetch('https://ai-desktop-api.vercel.app/api/v1/chat', {
           method: 'POST',
           headers: authHeaders,
           body: payload,
