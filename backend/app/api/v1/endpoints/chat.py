@@ -55,7 +55,7 @@ async def generate_gemini_response(prompt: str, history: Optional[List[dict]] = 
         )
 
         response = await client.aio.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash-lite",
             contents=contents,
             config=config,
         )
@@ -77,7 +77,7 @@ async def generate_gemini_response(prompt: str, history: Optional[List[dict]] = 
 
         legacy_genai.configure(api_key=api_key)
         model = legacy_genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
+            model_name="gemini-3.5-flash-lite",
             system_instruction=SYSTEM_INSTRUCTION,
         )
         chat_contents = []
