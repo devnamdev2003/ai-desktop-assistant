@@ -1,11 +1,11 @@
 {
-  "version": "0.1.6",
+  "version": "0.1.7",
   "notes": "Aivora initial release",
   "pub_date": "2026-09-19T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRamJLb0oxSmo4NklHWUVrbC9IdEdPNnVKVlYvNTZGUmk1M3M5cTBiZU95RWxaWlh3emZvRGlWa2VOc3YzVWF0VmFMc0Vpem1qTlozUnVNSXdkS0xleUlUdFo2djdjNHdFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwMDE2NDkwCWZpbGU6QWl2b3JhXzAuMS42X3g2NC1zZXR1cC5leGUKRU1IdDl4TmNVOEJhN0hSTUIrR2tWbXZ0SjN6M0JHeTdkMkxqaUxIbTZCSjZyVDhXOU05STFLcEhCQll4U2RnV3Z3UGtHMURyZ29PQk1adjlpbEVTRHc9PQo=",
-      "url": "https://github.com/devnamdev2003/ai-desktop-assistant/releases/download/v0.1.6/Aivora_0.1.6_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRamJLb0oxSmo4NkdHS3AwcnRhNlUzdDJSQ1dtNituN3lVc01Sa1hEVExYdlZqaG84THNLa2V4SzlIalJEdE5kTFFOM0hjRHJVZnNuaE5adjNTOEFKTWk0TGxsckRTcEFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkwMDE3MDIxCWZpbGU6QWl2b3JhXzAuMS43X3g2NC1zZXR1cC5leGUKeTNiNVpabjAvaXRWT2hkS3NqWWhlS1RXeTNZWUJnaTdUOE8wb2pJbG51T09DUFplY05XazZUTkhxd01PcG1nSU0vNDdEL2FaRGp3OXY2cUtad3owRHc9PQo=",
+      "url": "https://github.com/devnamdev2003/ai-desktop-assistant/releases/download/v0.1.7/Aivora_0.1.7_x64-setup.exe"
     }
   }
 }
