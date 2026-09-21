@@ -4,6 +4,7 @@ import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow, LogicalSize, Window } from '@tauri-apps/api/window';
 import { marked } from 'marked';
 import { check, Update } from '@tauri-apps/plugin-updater';
+import { AuthService, UserProfile } from './services/auth';
 
 export interface UpdateInfo {
   version: string;
@@ -116,7 +117,18 @@ export class App {
   showUpdateModal = signal(false);
   private tauriUpdateHandle: Update | null = null;
 
+  // Authentication & Backend State
+  authService = inject(AuthService);
+  showAuthModal = signal(false);
+  testApiResult = signal<string | null>(null);
+  isTestingApi = signal(false);
+  manualTokenInput = signal('');
+  manualCodeOrUrlInput = signal('');
+
   constructor() {
+    if (typeof document !== 'undefined' && this.isTauriEnvironment()) {
+      document.body.classList.add('is-tauri');
+    }
     this.checkForUpdates(false);
   }
 
@@ -285,6 +297,61 @@ export class App {
 
   closeUpdateModal(): void {
     this.showUpdateModal.set(false);
+  }
+
+  openAuthModal(): void {
+    this.showAuthModal.set(true);
+    this.testApiResult.set(null);
+    this.authService.checkBackendHealth();
+  }
+
+  closeAuthModal(): void {
+    this.showAuthModal.set(false);
+    this.testApiResult.set(null);
+  }
+
+  loginWithGoogle(): void {
+    this.authService.startGoogleLogin();
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.testApiResult.set(null);
+  }
+
+  async testProtectedEndpoint(): Promise<void> {
+    this.isTestingApi.set(true);
+    this.testApiResult.set(null);
+    try {
+      const user = await this.authService.fetchCurrentUser();
+      if (user) {
+        this.testApiResult.set(`Authenticated as: ${user.email} (ID: ${user.id})`);
+      } else {
+        this.testApiResult.set('Verification failed: Token rejected or expired.');
+      }
+    } catch (err: any) {
+      this.testApiResult.set(`Error: ${err.message || 'Failed to call endpoint'}`);
+    } finally {
+      this.isTestingApi.set(false);
+    }
+  }
+
+  async verifyManualToken(): Promise<void> {
+    const token = this.manualTokenInput().trim();
+    if (!token) return;
+    const success = await this.authService.verifyGoogleIdToken(token);
+    if (success) {
+      this.manualTokenInput.set('');
+    }
+  }
+
+  async redeemCodeOrUrl(): Promise<void> {
+    const val = this.manualCodeOrUrlInput().trim();
+    if (!val) return;
+    const success = await this.authService.exchangeGoogleCode(val);
+    if (success) {
+      this.manualCodeOrUrlInput.set('');
+    }
   }
 
   /**
@@ -519,6 +586,11 @@ export class App {
   }
 
   async sendMessage(customText?: string): Promise<void> {
+    if (!this.authService.isAuthenticated()) {
+      this.openAuthModal();
+      return;
+    }
+
     if (this.isStreamingActive()) {
       this.cancelStreaming();
       return;
@@ -652,69 +724,64 @@ export class App {
   }
 
   private async queryAi(question: string): Promise<string> {
+    if (!this.authService.isAuthenticated()) {
+      this.openAuthModal();
+      throw new Error('Authentication required: Only authenticated users can access Aivora.');
+    }
+
     const payload = JSON.stringify({ question });
-    const headers = {
-      accept: '*/*',
+    const authHeaders = {
+      accept: 'application/json',
       'Content-Type': 'application/json',
+      ...this.authService.getAuthorizationHeader(),
     };
 
-    // 1. If running inside Tauri desktop, try Tauri's native HTTP plugin first!
-    // This executes via Rust and bypasses all browser CORS restrictions and disallowed origin checks
-    if (this.isTauriEnvironment()) {
-      try {
-        const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
-        const res = await tauriFetch('https://fastapi-gemini-rag.vercel.app/ai', {
-          method: 'POST',
-          headers,
-          body: payload,
-        });
-
-        if (res.ok) {
-          const data = (await res.json()) as ApiResponse;
-          if (data && typeof data.answer === 'string') {
-            return data.answer;
-          }
-        }
-      } catch (err) {
-        console.warn('Tauri native HTTP fetch attempt failed, trying fallback:', err);
-      }
-    }
-
-    // 2. Try proxied endpoint (dev server / preview proxy)
+    // Query authenticated FastAPI backend endpoint exclusively
+    let res: Response | null = null;
     try {
-      const res = await fetch('/api/ai', {
+      res = await fetch('/api/v1/chat', {
         method: 'POST',
-        headers,
+        headers: authHeaders,
         body: payload,
       });
-
-      if (res.ok) {
-        const data = (await res.json()) as ApiResponse;
-        if (data && typeof data.answer === 'string') {
-          return data.answer;
-        }
-      }
     } catch {
-      // Fall through to direct endpoint attempt
+      // Direct backend port check if dev server proxy not running
+      try {
+        res = await fetch('http://localhost:8000/api/v1/chat', {
+          method: 'POST',
+          headers: authHeaders,
+          body: payload,
+        });
+      } catch {
+        res = null;
+      }
     }
 
-    // 3. Direct FastAPI Vercel endpoint fallback
-    const directRes = await fetch('https://fastapi-gemini-rag.vercel.app/ai', {
-      method: 'POST',
-      headers,
-      body: payload,
-    });
-
-    if (!directRes.ok) {
-      throw new Error(`Server returned ${directRes.status}`);
+    if (!res) {
+      throw new Error('FastAPI backend is offline. Please start the backend on port 8000 to access Aivora.');
     }
 
-    const directData = (await directRes.json()) as ApiResponse;
-    if (directData && typeof directData.answer === 'string') {
-      return directData.answer;
+    if (res.status === 401) {
+      // Session expired: attempt automatic refresh once
+      const refreshed = await this.authService.refreshSession();
+      if (refreshed) {
+        return this.queryAi(question);
+      }
+      this.openAuthModal();
+      throw new Error('Your authentication session has expired. Please sign in again.');
     }
 
-    throw new Error('No answer found in response');
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `Backend error: status ${res.status}`);
+    }
+
+    const data = (await res.json()) as ApiResponse;
+    if (data && typeof data.answer === 'string') {
+      return data.answer;
+    }
+
+    throw new Error('No valid answer returned by backend');
   }
 
   formatAnswer(text: string): SafeHtml {

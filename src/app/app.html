@@ -36,7 +36,16 @@
                    shadow-[0_0_14px_rgba(150,120,255,0.9),0_0_28px_rgba(100,70,255,0.5)]
                    transition-transform duration-300
                    group-hover:scale-110
-                   group-active:scale-95 animate-pulse"></div>
+                   group-active:scale-95 animate-pulse">
+          @if (!authService.isAuthenticated()) {
+          <div class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 border border-purple-400/80 text-purple-300 shadow"
+            title="Authentication required">
+            <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          }
+        </div>
       </button>
     </div>
 
@@ -82,47 +91,81 @@
         ? 'flex flex-col h-full w-full rounded-none overflow-hidden border-0 bg-slate-950 shadow-none transition-all duration-150'
         : 'flex flex-col h-[540px] w-[420px] max-w-[95vw] max-h-[92vh] rounded-3xl overflow-hidden border border-white/10 bg-slate-950/95 shadow-2xl shadow-black/80 backdrop-blur-2xl transition-all duration-300'">
 
-    <!-- HEADER / DRAG AREA -->
+    <!-- HEADER / DRAG AREA (DESKTOP APP TITLEBAR) -->
 
     <div id="aivora-header-bar" (mousedown)="startDragging($event)" (dblclick)="toggleMaximize()"
-      class="flex cursor-move select-none items-center justify-between border-b border-white/5 shrink-0 bg-slate-900/40"
-      [class]="isMaximized() ? 'px-8 py-4' : 'px-5 py-3.5'">
+      data-tauri-drag-region
+      class="flex cursor-move select-none items-center justify-between border-b border-white/10 shrink-0 bg-slate-900/90 backdrop-blur-xl"
+      [class]="isMaximized() ? 'px-4 py-2.5' : 'px-3 py-2'">
 
+      <!-- LEFT: DESKTOP APP BOX -->
       <div class="flex items-center gap-2.5">
-        <!-- Mini orb -->
-        <div class="relative flex h-6 w-6 items-center justify-center rounded-full
-                   bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]
-                   border border-white/20"></div>
+        <!-- App Box Container -->
+        <div class="flex items-center gap-2 rounded-xl bg-slate-800/80 border border-white/15 px-2.5 py-1.5 shadow-sm shadow-black/50 hover:border-white/25 transition">
+          <!-- Mini glowing Aivora orb -->
+          <div class="relative flex h-5 w-5 items-center justify-center rounded-full
+                     bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]
+                     border border-white/30 shadow-[0_0_8px_rgba(155,124,255,0.6)]"></div>
 
-        <div>
+          <!-- App Title & Badges -->
           <div class="flex items-center gap-1.5">
-            <span class="text-sm font-semibold tracking-wide text-white">Aivora</span>
-            <span
-              class="inline-flex items-center rounded-full bg-purple-500/20 px-1.5 py-0.5 text-[10px] font-medium text-purple-300">AI</span>
+            <span class="text-xs font-bold tracking-wide text-white uppercase">Aivora</span>
+            <span class="rounded bg-purple-500/20 border border-purple-500/30 px-1.5 py-0.5 text-[9px] font-semibold text-purple-300">
+              DESKTOP
+            </span>
             @if (isMaximized()) {
-            <span
-              class="inline-flex items-center rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] font-medium text-indigo-300">
-              Big Screen
+            <span class="rounded bg-indigo-500/20 border border-indigo-500/30 px-1.5 py-0.5 text-[9px] font-semibold text-indigo-300">
+              FULL
             </span>
             }
           </div>
-          <div class="text-[11px] text-white/45 flex items-center gap-1">
-            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-            <span>Ready & connected</span>
+
+          <!-- Active Indicator -->
+          <div class="flex items-center gap-1 pl-1 border-l border-white/10 text-[10px] text-white/50">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="hidden xs:inline sm:inline">Ready</span>
           </div>
         </div>
       </div>
 
 
-      <!-- HEADER ACTIONS -->
+      <!-- RIGHT: HEADER ACTIONS & DESKTOP WINDOW CONTROLS -->
 
       <div class="flex items-center gap-1.5">
+        <!-- GOOGLE AUTH / PROFILE BUTTON -->
+        @if (!authService.isAuthenticated()) {
+        <button id="google-login-btn" type="button" (mousedown)="$event.stopPropagation()"
+          (click)="openAuthModal()" title="Sign in with Google" aria-label="Sign in with Google"
+          class="relative flex h-7 items-center gap-1.5 px-2.5 rounded-lg text-xs font-medium transition cursor-pointer bg-white/5 text-white/80 hover:bg-white/10 hover:text-white border border-white/10">
+          <svg class="h-3.5 w-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          <span class="text-[11px] hidden sm:inline">Sign In</span>
+        </button>
+        } @else {
+        <button id="user-profile-btn" type="button" (mousedown)="$event.stopPropagation()"
+          (click)="openAuthModal()" [title]="authService.currentUser()?.email || 'User Profile'"
+          class="relative flex h-7 items-center gap-1.5 px-2 rounded-lg text-xs font-medium transition cursor-pointer bg-purple-500/20 text-purple-200 border border-purple-500/30 hover:bg-purple-500/30">
+          @if (authService.currentUser()?.avatar_url) {
+            <img [src]="authService.currentUser()?.avatar_url" class="h-4 w-4 rounded-full object-cover" alt="Avatar" />
+          } @else {
+            <div class="flex h-4 w-4 items-center justify-center rounded-full bg-purple-600 text-[9px] font-bold text-white">
+              {{ authService.currentUser()?.email?.charAt(0)?.toUpperCase() || 'U' }}
+            </div>
+          }
+          <span class="text-[11px] max-w-[80px] truncate hidden sm:inline">{{ authService.currentUser()?.full_name || authService.currentUser()?.email }}</span>
+        </button>
+        }
+
         <!-- CHECK / INSTALL UPDATE BUTTON -->
         <button id="check-update-btn" type="button" (mousedown)="$event.stopPropagation()"
           (click)="availableUpdate() ? openUpdateModal() : checkForUpdates(true)"
           [title]="availableUpdate() ? 'Update available! Click to update' : 'Check for app updates'"
           [attr.aria-label]="availableUpdate() ? 'Update available! Click to update' : 'Check for app updates'"
-          class="relative flex h-7 items-center gap-1 px-2 rounded-full text-xs font-medium transition cursor-pointer"
+          class="relative flex h-7 items-center gap-1 px-2 rounded-lg text-xs font-medium transition cursor-pointer"
           [class]="availableUpdate() ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'">
           <svg class="h-3.5 w-3.5" [class.animate-spin]="isCheckingUpdate()" fill="none" viewBox="0 0 24 24"
             stroke="currentColor">
@@ -143,7 +186,7 @@
         <!-- CLEAR CONVERSATION -->
         @if (messages().length > 0) {
         <button id="clear-chat-btn" type="button" (mousedown)="$event.stopPropagation()" (click)="clearChat()"
-          title="Clear conversation" aria-label="Clear conversation" class="flex h-7 w-7 items-center justify-center rounded-full
+          title="Clear conversation" aria-label="Clear conversation" class="flex h-7 w-7 items-center justify-center rounded-lg
                      bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white">
           <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -152,43 +195,48 @@
         </button>
         }
 
-        <!-- MINIMIZE / COLLAPSE TO ORB BUTTON -->
-        <button id="minimize-to-orb-btn" type="button" (mousedown)="$event.stopPropagation()"
-          (click)="toggleAssistant()" title="Minimize to floating orb" aria-label="Minimize to floating orb"
-          class="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white">
-          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 13H5" />
-          </svg>
-        </button>
+        <!-- DESKTOP SEPARATOR DIVIDER -->
+        <div class="h-4 w-px bg-white/15 mx-0.5"></div>
 
-        <!-- BIG SCREEN / MAXIMIZE TOGGLE BUTTON -->
-        <button id="toggle-screen-size-btn" type="button" (mousedown)="$event.stopPropagation()"
-          (click)="toggleMaximize()" [title]="isMaximized() ? 'Restore compact window' : 'Expand to big screen'"
-          [attr.aria-label]="isMaximized() ? 'Restore compact window' : 'Expand to big screen'" class="flex h-7 w-7 items-center justify-center rounded-full
-                   bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white">
-          @if (isMaximized()) {
-          <!-- Restore down / Collapse screen size icon (arrows pointing inward) -->
-          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4 14h6v6m0-6L3 21m17-11h-6V4m0 6l7-7" />
-          </svg>
-          } @else {
-          <!-- Expand to big screen icon (arrows pointing outward) -->
-          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M15 3h6v6m0-6L14 10M9 21H3v-6m0 6l7-7" />
-          </svg>
-          }
-        </button>
+        <!-- DESKTOP WINDOW CONTROLS CLUSTER (MINIMIZE, MAXIMIZE, CLOSE X) -->
+        <div class="flex items-center rounded-lg border border-white/10 bg-white/5 overflow-hidden shadow-sm">
+          <!-- MINIMIZE BUTTON -->
+          <button id="minimize-to-orb-btn" type="button" (mousedown)="$event.stopPropagation()"
+            (click)="toggleAssistant()" title="Minimize to floating orb" aria-label="Minimize"
+            class="flex h-7 w-8 items-center justify-center text-white/70 hover:bg-white/15 hover:text-white transition cursor-pointer">
+            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 13H5" />
+            </svg>
+          </button>
 
-        <!-- QUIT / CLOSE APP PERMANENTLY BUTTON -->
-        <button id="quit-app-btn" type="button" (mousedown)="$event.stopPropagation()" (click)="quitApp($event)"
-          title="Quit and close application" aria-label="Quit and close application"
-          class="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-white/60 transition hover:bg-red-500/30 hover:text-red-200 hover:border-red-500/40 border border-transparent">
-          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+          <!-- MAXIMIZE / RESTORE BUTTON -->
+          <button id="toggle-screen-size-btn" type="button" (mousedown)="$event.stopPropagation()"
+            (click)="toggleMaximize()" [title]="isMaximized() ? 'Restore window' : 'Maximize window'"
+            [attr.aria-label]="isMaximized() ? 'Restore window' : 'Maximize window'"
+            class="flex h-7 w-8 items-center justify-center text-white/70 hover:bg-white/15 hover:text-white transition cursor-pointer border-l border-white/10">
+            @if (isMaximized()) {
+            <!-- Overlapping window restore icon -->
+            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <rect x="7" y="3" width="14" height="14" rx="1.5" stroke-width="2" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8v11a2 2 0 002 2h11" />
+            </svg>
+            } @else {
+            <!-- Single maximize square icon -->
+            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <rect x="4" y="4" width="16" height="16" rx="2" stroke-width="2" />
+            </svg>
+            }
+          </button>
+
+          <!-- PROPER DESKTOP CLOSE 'X' BUTTON (ALWAYS SHOWN AT THE END) -->
+          <button id="quit-app-btn" type="button" (mousedown)="$event.stopPropagation()" (click)="quitApp($event)"
+            title="Close application" aria-label="Close"
+            class="flex h-7 w-9 items-center justify-center text-white/80 hover:bg-red-600 hover:text-white transition cursor-pointer border-l border-white/10 group">
+            <svg class="h-3.5 w-3.5 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
     </div>
@@ -200,6 +248,99 @@
       [class]="isMaximized() ? 'px-6 md:px-12 py-6 space-y-6' : 'px-5 py-4 space-y-4'">
       <div
         [class]="isMaximized() ? 'max-w-5xl mx-auto w-full flex flex-col min-h-full' : 'w-full flex flex-col min-h-full'">
+
+        @if (!authService.isAuthenticated()) {
+        <!-- ACCESS RESTRICTED / LOCK SCREEN -->
+        <div class="flex flex-col items-center justify-center my-auto py-10 text-center px-4">
+          <div class="relative flex items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/20 to-indigo-500/10 border border-purple-500/30 p-5 mb-5 shadow-2xl shadow-purple-950/50">
+            <svg class="h-10 w-10 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <div class="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow">
+              <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+          </div>
+
+          <div class="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 border border-red-500/30 px-3 py-1 text-[11px] font-semibold text-red-300 mb-3.5">
+            <span class="h-1.5 w-1.5 rounded-full bg-red-400"></span>
+            <span>Authentication Required</span>
+          </div>
+
+          <h2 class="text-xl font-bold text-white tracking-tight">
+            Access Restricted
+          </h2>
+          <p class="mt-2 text-xs text-white/60 max-w-[340px] leading-relaxed">
+            Aivora Assistant is locked. Only authenticated users with an authorized Google account can access AI reasoning, ask questions, or run queries.
+          </p>
+
+          <div class="mt-6 flex flex-col items-center gap-3 w-full max-w-[290px]">
+            @if (authService.isWaitingForBrowserAuth()) {
+            <div class="w-full rounded-2xl bg-purple-500/10 border border-purple-500/30 p-3.5 text-center">
+              <div class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-purple-500/20 text-purple-300 mb-2 animate-pulse">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </div>
+              <p class="text-xs font-semibold text-white">Browser Opened</p>
+              <p class="mt-1 text-[11px] text-white/70 leading-relaxed">
+                Choose your Google account in your browser. Aivora will unlock automatically once completed.
+              </p>
+
+              <!-- Quick redeemer if browser refused to connect -->
+              <div class="mt-2.5 p-2.5 rounded-xl bg-black/40 border border-white/10 text-left">
+                <p class="text-[10px] text-amber-300/90 font-medium mb-1">
+                  Browser says "localhost refused to connect"?
+                </p>
+                <div class="flex gap-1.5">
+                  <input type="text" [value]="manualCodeOrUrlInput()" (input)="manualCodeOrUrlInput.set($any($event.target).value)"
+                    placeholder="Paste browser bar URL or code"
+                    class="flex-1 rounded-lg bg-white/5 border border-white/10 px-2 py-1 text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-purple-500 font-mono" />
+                  <button type="button" (click)="redeemCodeOrUrl()"
+                    [disabled]="!manualCodeOrUrlInput() || authService.isLoading()"
+                    class="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-[10px] font-semibold text-white transition disabled:opacity-40 cursor-pointer shrink-0">
+                    Unlock
+                  </button>
+                </div>
+              </div>
+
+              <div class="mt-3 flex gap-2">
+                <button type="button" (click)="authService.reopenBrowserAuth()"
+                  class="flex-1 rounded-xl bg-purple-600/90 hover:bg-purple-600 px-3 py-1.5 text-[11px] font-medium text-white transition cursor-pointer">
+                  Re-open Browser
+                </button>
+                <button type="button" (click)="authService.cancelBrowserAuth()"
+                  class="rounded-xl bg-white/10 hover:bg-white/15 px-3 py-1.5 text-[11px] font-medium text-white/70 hover:text-white transition cursor-pointer">
+                  Cancel
+                </button>
+              </div>
+            </div>
+            } @else {
+            <button id="lockscreen-signin-btn" type="button" (click)="loginWithGoogle()"
+              [disabled]="authService.isLoading()"
+              class="w-full flex items-center justify-center gap-2.5 rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-slate-900 shadow-xl hover:bg-slate-100 active:scale-[0.98] transition cursor-pointer disabled:opacity-50">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              </svg>
+              @if (authService.isLoading()) {
+                <span>Connecting to Google OAuth...</span>
+              } @else {
+                <span>Sign in with Google</span>
+              }
+            </button>
+            }
+
+            <button type="button" (click)="openAuthModal()"
+              class="text-[11px] text-white/50 hover:text-white/80 transition cursor-pointer underline">
+              Manual / Dev Token Verification
+            </button>
+          </div>
+        </div>
+        } @else {
 
         <!-- EMPTY STATE (WELCOME SCREEN) -->
         @if (messages().length === 0) {
@@ -348,6 +489,8 @@
         </div>
         }
 
+        }
+
       </div>
     </div>
 
@@ -357,6 +500,20 @@
     <div id="aivora-input-bar" class="border-t border-white/10 bg-slate-950 shrink-0"
       [class]="isMaximized() ? 'p-4 md:px-12' : 'p-3.5 bg-slate-950/80'">
       <div [class]="isMaximized() ? 'max-w-5xl mx-auto w-full' : 'w-full'">
+        @if (!authService.isAuthenticated()) {
+        <div class="flex w-full items-center justify-between rounded-2xl border border-purple-500/20 bg-white/5 px-4 py-3 text-xs text-white/50">
+          <div class="flex items-center gap-2">
+            <svg class="h-4 w-4 text-purple-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <span class="text-white/70 font-medium">Please sign in to send messages or use tools</span>
+          </div>
+          <button type="button" (click)="openAuthModal()"
+            class="rounded-xl bg-purple-600/80 hover:bg-purple-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow transition cursor-pointer">
+            Sign In
+          </button>
+        </div>
+        } @else {
         <form (submit)="$event.preventDefault(); sendMessage()"
           class="flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3.5 py-2.5 focus-within:border-white/30 focus-within:bg-white/[0.07] focus-within:shadow-none transition-colors">
 
@@ -388,9 +545,10 @@
           </button>
 
         </form>
+        }
 
         <div class="mt-1.5 flex items-center justify-between px-1 text-[10px] text-white/30">
-          <span>FastAPI Gemini RAG</span>
+          <span>FastAPI Gemini RAG • Authenticated</span>
           <div class="flex items-center gap-2">
             @if (isMaximized()) {
             <span>Press Maximize button again to restore compact mode</span>
@@ -514,6 +672,252 @@
           class="px-4 py-2 rounded-xl text-xs font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/15 transition cursor-pointer">
           Done
         </button>
+      </div>
+      }
+
+    </div>
+  </div>
+  }
+
+  <!-- ========================= -->
+  <!-- AUTH / ACCOUNT MODAL     -->
+  <!-- ========================= -->
+  @if (showAuthModal()) {
+  <div id="aivora-auth-modal-backdrop"
+    class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 transition-all duration-200"
+    (mousedown)="closeAuthModal()">
+
+    <div id="aivora-auth-modal"
+      class="relative w-full max-w-[440px] rounded-2xl border border-white/15 bg-slate-900/95 p-6 shadow-2xl backdrop-blur-xl transition-all"
+      (mousedown)="$event.stopPropagation()">
+
+      <!-- Close Button -->
+      <button id="close-auth-modal-btn" type="button" (click)="closeAuthModal()"
+        class="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-white/60 hover:bg-white/15 hover:text-white transition cursor-pointer">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <!-- Header -->
+      <div class="flex items-center gap-3 border-b border-white/10 pb-4 mb-4">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30">
+          <svg class="h-5 w-5 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-sm font-semibold text-white">Aivora Cloud & Google OAuth</h3>
+          <p class="text-xs text-white/50">PostgreSQL Backend & JWT Sessions</p>
+        </div>
+      </div>
+
+      <!-- Backend Connection Status Pill -->
+      <div class="mb-4 flex items-center justify-between rounded-xl px-3 py-2 text-xs border"
+        [class]="authService.backendHealthy() ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-amber-500/10 border-amber-500/20 text-amber-300'">
+        <div class="flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full" [class]="authService.backendHealthy() ? 'bg-emerald-400' : 'bg-amber-400'"></span>
+          <span>FastAPI: {{ authService.backendHealthy() ? 'Connected (Port 8000)' : 'Offline / Standalone Mode' }}</span>
+        </div>
+        <button type="button" (click)="authService.checkBackendHealth()" class="underline hover:opacity-80 text-[11px] cursor-pointer">
+          Refresh
+        </button>
+      </div>
+
+      @if (!authService.isAuthenticated()) {
+      <!-- SIGN IN VIEW -->
+      <div class="space-y-4">
+        <p class="text-xs text-white/70 leading-relaxed">
+          Sign in with your Google account to sync assistant conversations with your private <strong>Neon PostgreSQL</strong> database, access protected APIs, and manage secure JWT sessions.
+        </p>
+
+        @if (authService.authError()) {
+        <div class="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+          {{ authService.authError() }}
+        </div>
+        }
+
+        @if (authService.authSuccessMessage()) {
+        <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 flex items-center gap-2">
+          <svg class="h-4 w-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span>{{ authService.authSuccessMessage() }}</span>
+        </div>
+        }
+
+        @if (authService.isWaitingForBrowserAuth()) {
+        <!-- Browser Active Card -->
+        <div class="rounded-2xl bg-purple-500/10 border border-purple-500/30 p-4 text-center">
+          <div class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/20 text-purple-300 mb-2 animate-pulse">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </div>
+          <h4 class="text-xs font-semibold text-white">Browser Sign-In Active</h4>
+          <p class="mt-1 text-[11px] text-white/70 leading-relaxed">
+            Please select your Google account in the opened browser window. The desktop app will automatically connect once you approve.
+          </p>
+
+          <!-- Immediate Browser Callback URL / Code Paste Helper -->
+          <div class="mt-3 p-3 rounded-xl bg-black/40 border border-white/10 text-left">
+            <div class="flex items-center gap-1.5 text-[10px] text-amber-300 font-medium mb-1">
+              <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Browser says "can't reach page / localhost refused to connect"?</span>
+            </div>
+            <p class="text-[10px] text-white/60 mb-2 leading-relaxed">
+              Copy the address from your browser bar (starting with <code>http://localhost:8000/...</code>) and paste it below:
+            </p>
+            <div class="flex gap-1.5">
+              <input type="text" [value]="manualCodeOrUrlInput()" (input)="manualCodeOrUrlInput.set($any($event.target).value)"
+                placeholder="Paste callback URL or code"
+                class="flex-1 rounded-lg bg-white/5 border border-white/10 px-2.5 py-1 text-[11px] text-white placeholder-white/30 focus:outline-none focus:border-purple-500 font-mono" />
+              <button type="button" (click)="redeemCodeOrUrl()"
+                [disabled]="!manualCodeOrUrlInput() || authService.isLoading()"
+                class="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-[11px] font-semibold text-white transition disabled:opacity-40 cursor-pointer shrink-0">
+                Complete Login
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-3 flex gap-2">
+            <button type="button" (click)="authService.reopenBrowserAuth()"
+              class="flex-1 rounded-xl bg-purple-600/90 hover:bg-purple-600 px-3 py-1.5 text-xs font-medium text-white transition cursor-pointer">
+              Re-open Browser
+            </button>
+            <button type="button" (click)="authService.cancelBrowserAuth()"
+              class="rounded-xl bg-white/10 hover:bg-white/15 px-3 py-1.5 text-xs font-medium text-white/70 hover:text-white transition cursor-pointer">
+              Cancel
+            </button>
+          </div>
+        </div>
+        } @else {
+        <!-- One-Click Google Login Button -->
+        <button id="modal-google-signin-btn" type="button" (click)="loginWithGoogle()"
+          [disabled]="authService.isLoading()"
+          class="w-full flex items-center justify-center gap-3 rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-gray-900 shadow-lg hover:bg-gray-100 active:scale-[0.98] transition cursor-pointer disabled:opacity-50">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          @if (authService.isLoading()) {
+            <span>Connecting to Google OAuth...</span>
+          } @else {
+            <span>Continue with Google</span>
+          }
+        </button>
+        }
+
+        <!-- Direct Token / Code verification drawer for dev testing -->
+        <div class="pt-2 border-t border-white/10 space-y-2">
+          <div>
+            <label class="block text-[11px] font-medium text-white/50 mb-1">Paste Redirect URL / Authorization Code:</label>
+            <div class="flex gap-2">
+              <input type="text" [value]="manualCodeOrUrlInput()" (input)="manualCodeOrUrlInput.set($any($event.target).value)"
+                placeholder="Paste code or http://localhost:8000/..."
+                class="flex-1 rounded-xl bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 font-mono" />
+              <button type="button" (click)="redeemCodeOrUrl()"
+                [disabled]="!manualCodeOrUrlInput() || authService.isLoading()"
+                class="px-3 py-1.5 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-xs font-medium text-white transition disabled:opacity-40 cursor-pointer">
+                Redeem
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-medium text-white/50 mb-1">Or Paste Google ID Token / JWT:</label>
+            <div class="flex gap-2">
+              <input type="text" [value]="manualTokenInput()" (input)="manualTokenInput.set($any($event.target).value)"
+                placeholder="Paste Google ID Token or JWT"
+                class="flex-1 rounded-xl bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 font-mono" />
+              <button type="button" (click)="verifyManualToken()"
+                [disabled]="!manualTokenInput() || authService.isLoading()"
+                class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-medium text-white transition disabled:opacity-40 cursor-pointer">
+                Verify
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      } @else {
+      <!-- AUTHENTICATED USER VIEW -->
+      <div class="space-y-4">
+        <!-- User Profile Card -->
+        <div class="flex items-center gap-3.5 rounded-xl bg-white/5 border border-white/10 p-3.5">
+          @if (authService.currentUser()?.avatar_url) {
+            <img [src]="authService.currentUser()?.avatar_url" class="h-12 w-12 rounded-full object-cover border border-white/20" alt="Avatar" />
+          } @else {
+            <div class="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-base font-bold text-white shadow-lg">
+              {{ authService.currentUser()?.email?.charAt(0)?.toUpperCase() || 'U' }}
+            </div>
+          }
+          <div class="min-w-0 flex-1">
+            <h4 class="text-sm font-semibold text-white truncate">
+              {{ authService.currentUser()?.full_name || 'Authenticated User' }}
+            </h4>
+            <p class="text-xs text-white/60 truncate">{{ authService.currentUser()?.email }}</p>
+            <div class="mt-1 flex items-center gap-1.5 text-[10px] text-purple-300">
+              <span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+              <span>Active JWT Session (HS256)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Session Details -->
+        <div class="rounded-xl bg-black/30 border border-white/5 p-3 text-xs space-y-1.5 text-white/60">
+          <div class="flex justify-between">
+            <span>User ID:</span>
+            <span class="font-mono text-white/80 text-[10px]">{{ authService.currentUser()?.id }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Google ID:</span>
+            <span class="font-mono text-white/80 text-[10px]">{{ authService.currentUser()?.google_id || 'Linked' }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Token Type:</span>
+            <span class="font-mono text-emerald-400 text-[10px]">Bearer (Access & Refresh)</span>
+          </div>
+        </div>
+
+        <!-- Protected Endpoint Test -->
+        <div class="rounded-xl border border-white/10 bg-white/5 p-3 text-xs space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-medium text-white/80">Test Protected Endpoint:</span>
+            <button type="button" (click)="testProtectedEndpoint()" [disabled]="isTestingApi()"
+              class="px-2.5 py-1 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-[11px] font-medium text-white transition disabled:opacity-50 cursor-pointer">
+              @if (isTestingApi()) {
+                <span>Testing...</span>
+              } @else {
+                <span>Call GET /api/v1/auth/me</span>
+              }
+            </button>
+          </div>
+          @if (testApiResult()) {
+            <p class="text-[11px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 font-mono break-all">
+              {{ testApiResult() }}
+            </p>
+          }
+        </div>
+
+        <!-- Sign Out Button -->
+        <div class="flex justify-end gap-2.5 pt-2">
+          <button id="modal-signout-btn" type="button" (click)="logout()"
+            class="px-4 py-2 rounded-xl text-xs font-medium text-red-300 hover:text-red-200 bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 transition cursor-pointer">
+            Sign Out
+          </button>
+          <button type="button" (click)="closeAuthModal()"
+            class="px-4 py-2 rounded-xl text-xs font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/15 transition cursor-pointer">
+            Close
+          </button>
+        </div>
       </div>
       }
 

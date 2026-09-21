@@ -18,6 +18,10 @@
           "builder": "@angular/build:application",
           "options": {
             "browser": "src/main.ts",
+            "outputPath": {
+              "base": "dist",
+              "browser": ""
+            },
             "tsConfig": "tsconfig.app.json",
             "assets": [
               {
@@ -56,6 +60,8 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "options": {
+            "port": 3000,
+            "host": "0.0.0.0",
             "proxyConfig": "proxy.conf.json"
           },
           "configurations": {

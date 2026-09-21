@@ -6,8 +6,18 @@ body {
   padding: 0;
   width: 100%;
   height: 100%;
-  background: transparent;
   overflow: hidden;
+}
+
+body:not(.is-tauri) {
+  background-color: #050814;
+  background-image:
+    radial-gradient(ellipse at 50% 15%, rgba(126, 34, 206, 0.16), transparent 50%),
+    radial-gradient(ellipse at 85% 85%, rgba(30, 64, 175, 0.12), transparent 45%);
+}
+
+body.is-tauri {
+  background: transparent !important;
 }
 
 /* Sleek custom scrollbar */

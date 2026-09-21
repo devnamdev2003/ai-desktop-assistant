@@ -1,6 +1,6 @@
 {
-  "name": "Aivora AI Assistant",
-  "description": "Desktop and web AI assistant with conversational chat, prompt suggestions, and markdown support.",
+  "name": "Aivora Desktop AI Assistant",
+  "description": "Tauri desktop AI assistant with FastAPI backend, PostgreSQL persistence, Google OAuth 2.0, JWT authentication, floating orb, and markdown chat.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

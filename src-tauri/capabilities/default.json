@@ -9,6 +9,8 @@
     "core:window:allow-center",
     "core:window:allow-start-dragging",
     "updater:default",
+    "opener:default",
+    "deep-link:default",
     "core:window:allow-maximize",
     "core:window:allow-unmaximize",
     "core:window:allow-toggle-maximize",
@@ -27,8 +29,8 @@
     {
       "identifier": "http:default",
       "allow": [
-        { "url": "https://fastapi-gemini-rag.vercel.app/*" },
-        { "url": "http://localhost:*/*" }
+        { "url": "http://localhost:*/*" },
+        { "url": "http://127.0.0.1:*/*" }
       ]
     }
   ]

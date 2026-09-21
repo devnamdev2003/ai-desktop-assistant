@@ -43,4 +43,19 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
+# Environment variables
 .env
+.env.*
+!.env.example
+backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.vscode
