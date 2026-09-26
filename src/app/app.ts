@@ -183,6 +183,15 @@ export class App {
   constructor() {
     if (typeof document !== 'undefined' && this.isTauriEnvironment()) {
       document.body.classList.add('is-tauri');
+      // Ensure the taskbar icon is visible and always-on-top is enabled for the initial small/orb view
+      this.safeWindowOp(async (win) => {
+        try {
+          await win.setSkipTaskbar(false);
+        } catch { }
+        try {
+          await win.setAlwaysOnTop(true);
+        } catch { }
+      });
     }
     this.checkForUpdates(false);
   }
@@ -923,7 +932,17 @@ export class App {
           await win.setResizable(true);
         } catch { }
 
+        // Keep taskbar icon visible
+        try {
+          await win.setSkipTaskbar(false);
+        } catch { }
+
         if (this.isMaximized()) {
+          // Maximized mode: must NOT be stuck on top of other desktop apps
+          try {
+            await win.setAlwaysOnTop(false);
+          } catch { }
+
           try {
             await win.maximize();
           } catch {
@@ -931,6 +950,11 @@ export class App {
             await win.center();
           }
         } else {
+          // Small mode: stay stuck on screen as floating assistant
+          try {
+            await win.setAlwaysOnTop(true);
+          } catch { }
+
           await win.setSize(new LogicalSize(440, 560));
           await win.center();
         }
@@ -941,14 +965,24 @@ export class App {
         this.scrollToBottom();
       }, 100);
     } else {
+      // In orb mode: small orb remains stuck on screen (always-on-top) and taskbar icon remains visible
       await this.safeWindowOp(async (win) => {
         if (this.isMaximized()) {
           try {
             await win.unmaximize();
           } catch { }
         }
+
+        try {
+          await win.setSkipTaskbar(false);
+        } catch { }
+
         await win.setSize(new LogicalSize(120, 120));
         await win.center();
+
+        try {
+          await win.setAlwaysOnTop(true);
+        } catch { }
       });
       this.isMaximized.set(false);
     }
@@ -963,7 +997,18 @@ export class App {
         await win.setResizable(true);
       } catch { }
 
+      // Keep taskbar icon visible
+      try {
+        await win.setSkipTaskbar(false);
+      } catch { }
+
       if (nextState) {
+        // Maximized screen: DISABLE always-on-top so when user switches to another app,
+        // that app is shown and Aivora does not stay stuck covering the whole screen!
+        try {
+          await win.setAlwaysOnTop(false);
+        } catch { }
+
         try {
           await win.maximize();
         } catch {
@@ -972,16 +1017,31 @@ export class App {
           await win.center();
         }
       } else {
+        // Restored to small window: ENABLE always-on-top so small window stays stuck on screen
         try {
           await win.unmaximize();
         } catch { }
         await win.setSize(new LogicalSize(440, 560));
         await win.center();
+
+        try {
+          await win.setAlwaysOnTop(true);
+        } catch { }
       }
     });
 
     this.scrollToBottom();
     setTimeout(() => this.chatInputElement?.nativeElement?.focus(), 50);
+  }
+
+  async minimizeToTaskbar(): Promise<void> {
+    await this.safeWindowOp(async (win) => {
+      try {
+        await win.minimize();
+      } catch (err) {
+        console.warn('win.minimize() error:', err);
+      }
+    });
   }
 
   onInputChange(event: Event): void {
