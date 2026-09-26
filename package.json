@@ -9,7 +9,12 @@
     "ng": "ng",
     "tauri": "tauri",
     "backend:dev": "python3 backend/run.py",
-    "db:migrate": "node scripts/setup-db.cjs",
+    "db:makemigrations": "python3 manage.py makemigrations",
+    "db:migrate": "python3 manage.py migrate",
+    "db:clear": "python3 manage.py 1",
+    "db:recreate": "python3 manage.py 2",
+    "db:reset": "python3 manage.py 2",
+    "db:status": "python3 manage.py 3",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"

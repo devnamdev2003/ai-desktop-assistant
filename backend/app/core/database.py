@@ -41,24 +41,25 @@ def init_db() -> None:
 
 
 def reset_db() -> None:
-    """Drops all tables and recreates them cleanly from scratch in PostgreSQL."""
+    """Drops all tables and recreates them cleanly from scratch dynamically using Base.metadata."""
     import app.models  # noqa: F401
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-    print("✔ All PostgreSQL tables dropped and recreated from scratch successfully.")
+    print("✔ All tables dropped and recreated from scratch from current SQLAlchemy models.")
 
 
 def clear_all_data() -> None:
-    """Truncates all data from all tables while keeping table structures intact."""
+    """Truncates all data from all tables dynamically registered in Base.metadata."""
     import app.models  # noqa: F401
+    tables = [f'"{table.name}"' for table in Base.metadata.sorted_tables]
+    if not tables:
+        print("ℹ No tables found in Base.metadata.")
+        return
     with engine.begin() as conn:
         try:
-            conn.execute(text("TRUNCATE TABLE chat_messages, conversations, refresh_tokens, users RESTART IDENTITY CASCADE;"))
+            conn.execute(text(f"TRUNCATE TABLE {', '.join(tables)} RESTART IDENTITY CASCADE;"))
         except Exception:
-            # Fallback for DB engines that don't support multi-table cascade truncate
-            conn.execute(text("DELETE FROM chat_messages;"))
-            conn.execute(text("DELETE FROM conversations;"))
-            conn.execute(text("DELETE FROM refresh_tokens;"))
-            conn.execute(text("DELETE FROM users;"))
-    print("✔ All data in tables has been successfully cleared.")
+            for table in reversed(Base.metadata.sorted_tables):
+                conn.execute(table.delete())
+    print("✔ All data across all model tables has been successfully cleared.")
 

@@ -19,3 +19,8 @@ Get-Content .\src-tauri\target\release\bundle\nsis\Aivora_0.1.0_x64-setup.exe.si
 ```
 
 change the latest.json file
+
+db setup:
+url=postgresql://<username>:<password>@<host>:<port>/<database_name>
+
+run python manage.py
