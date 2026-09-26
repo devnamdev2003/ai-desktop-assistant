@@ -107,6 +107,7 @@ export class App {
   showOrbContextMenu = signal(false);
   isStreamingActive = signal(false);
   private activeStreamTimer: ReturnType<typeof setTimeout> | null = null;
+  private activeAbortController: AbortController | null = null;
 
   // App Update State
   currentAppVersion = signal('0.1.2');
@@ -1059,11 +1060,18 @@ export class App {
   }
 
   clearChat(): void {
+    if (this.activeAbortController) {
+      try {
+        this.activeAbortController.abort();
+      } catch { }
+      this.activeAbortController = null;
+    }
     if (this.activeStreamTimer) {
       clearTimeout(this.activeStreamTimer);
       this.activeStreamTimer = null;
     }
     this.isStreamingActive.set(false);
+    this.isLoading.set(false);
     this.messages.set([]);
     this.errorMessage.set(null);
     this.inputText.set('');
@@ -1071,11 +1079,18 @@ export class App {
   }
 
   cancelStreaming(): void {
+    if (this.activeAbortController) {
+      try {
+        this.activeAbortController.abort();
+      } catch { }
+      this.activeAbortController = null;
+    }
     if (this.activeStreamTimer) {
       clearTimeout(this.activeStreamTimer);
       this.activeStreamTimer = null;
     }
     this.isStreamingActive.set(false);
+    this.isLoading.set(false);
     this.messages.update((msgs) =>
       msgs.map((m) => (m.isStreaming ? { ...m, isStreaming: false } : m))
     );
@@ -1127,11 +1142,22 @@ export class App {
     this.isLoading.set(true);
     this.scrollToBottom();
 
+    const assistantId = `assistant-${Date.now()}`;
+    const initialAssistantMessage: ChatMessage = {
+      id: assistantId,
+      sender: 'assistant',
+      text: '',
+      formattedText: '',
+      isStreaming: true,
+      timestamp: new Date(),
+    };
+
     try {
-      const answer = await this.queryAi(questionText);
-      this.isLoading.set(false);
-      await this.streamAssistantResponse(answer);
+      await this.streamAiResponse(questionText, assistantId, initialAssistantMessage);
     } catch (err: unknown) {
+      if ((err as { name?: string })?.name === 'AbortError') {
+        return;
+      }
       const errText = err instanceof Error ? err.message : 'Failed to communicate with AI';
       this.errorMessage.set(errText);
       const errorMessageObj: ChatMessage = {
@@ -1144,114 +1170,41 @@ export class App {
         timestamp: new Date(),
         isError: true,
       };
-      this.messages.update((list) => [...list, errorMessageObj]);
+      // Retain any partial text streamed, or show error message
+      this.messages.update((list) => {
+        const filtered = list.filter((m) => m.id !== assistantId || (m.text && m.text.trim().length > 0));
+        return [...filtered, errorMessageObj];
+      });
     } finally {
       this.isLoading.set(false);
+      this.isStreamingActive.set(false);
+      this.activeAbortController = null;
       this.scrollToBottom();
       setTimeout(() => this.chatInputElement?.nativeElement?.focus(), 50);
     }
   }
 
   /**
-   * Streams the assistant's answer chunk-by-chunk to create a natural typing effect.
+   * Connects to /api/v1/chat with Server-Sent Events (SSE) to stream token generations in real-time.
    */
-  private async streamAssistantResponse(fullText: string): Promise<void> {
-    const assistantId = `assistant-${Date.now()}`;
-    const initialMessage: ChatMessage = {
-      id: assistantId,
-      sender: 'assistant',
-      text: '',
-      formattedText: '',
-      isStreaming: true,
-      timestamp: new Date(),
-    };
-
-    this.messages.update((prev) => [...prev, initialMessage]);
-    this.isStreamingActive.set(true);
-    this.scrollToBottom();
-
-    return new Promise<void>((resolve) => {
-      let currentIndex = 0;
-      const totalLength = fullText.length;
-
-      const getChunkSize = (): number => {
-        if (totalLength > 1200) {
-          return Math.floor(Math.random() * 8) + 8;
-        } else if (totalLength > 400) {
-          return Math.floor(Math.random() * 5) + 4;
-        }
-        return Math.floor(Math.random() * 3) + 2;
-      };
-
-      const tick = () => {
-        if (currentIndex < totalLength) {
-          const remaining = totalLength - currentIndex;
-          const step = Math.min(getChunkSize(), remaining);
-          currentIndex += step;
-
-          const currentText = fullText.slice(0, currentIndex);
-          const formatted = this.formatAnswer(currentText);
-          const isDone = currentIndex >= totalLength;
-
-          this.messages.update((msgs) =>
-            msgs.map((m) =>
-              m.id === assistantId
-                ? {
-                  ...m,
-                  text: currentText,
-                  formattedText: formatted,
-                  isStreaming: !isDone,
-                }
-                : m
-            )
-          );
-
-          this.scrollToBottom();
-
-          if (!isDone) {
-            const lastChar = currentText.slice(-1);
-            let delay = 18;
-            if (['.', '!', '?', '\n'].includes(lastChar)) {
-              delay = 45;
-            } else if ([',', ';', ':'].includes(lastChar)) {
-              delay = 28;
-            }
-            this.activeStreamTimer = setTimeout(tick, delay);
-          } else {
-            this.isStreamingActive.set(false);
-            this.activeStreamTimer = null;
-            this.playCompletionChime();
-            resolve();
-          }
-        } else {
-          this.isStreamingActive.set(false);
-          this.activeStreamTimer = null;
-          this.playCompletionChime();
-          resolve();
-        }
-      };
-
-      this.activeStreamTimer = setTimeout(tick, 15);
-    });
-  }
-
-  private async queryAi(question: string): Promise<string> {
-    if (!this.authService.isAuthenticated()) {
-      this.openAuthModal();
-      throw new Error('Authentication required: Only authenticated users can access Aivora.');
-    }
+  private async streamAiResponse(
+    question: string,
+    assistantId: string,
+    initialAssistantMessage: ChatMessage
+  ): Promise<void> {
+    this.activeAbortController = new AbortController();
 
     const payload = JSON.stringify({
       question,
       conversation_id: this.currentSessionId() || undefined,
+      stream: true,
     });
     const authHeaders = {
-      accept: 'application/json',
+      Accept: 'text/event-stream, application/json',
       'Content-Type': 'application/json',
       ...this.authService.getAuthorizationHeader(),
     };
 
-    // Query authenticated FastAPI backend endpoint exclusively
     const endpoint = this.configService.getFullUrl('/api/v1/chat');
     let res: Response | null = null;
     try {
@@ -1259,8 +1212,12 @@ export class App {
         method: 'POST',
         headers: authHeaders,
         body: payload,
+        signal: this.activeAbortController.signal,
       });
-    } catch {
+    } catch (e: unknown) {
+      if ((e as { name?: string })?.name === 'AbortError') {
+        throw e;
+      }
       res = null;
     }
 
@@ -1272,7 +1229,7 @@ export class App {
       // Session expired: attempt automatic refresh once
       const refreshed = await this.authService.refreshSession();
       if (refreshed) {
-        return this.queryAi(question);
+        return this.streamAiResponse(question, assistantId, initialAssistantMessage);
       }
       this.openAuthModal();
       throw new Error('Your session has expired. Please sign in again.');
@@ -1283,19 +1240,119 @@ export class App {
       throw new Error(errData.detail || 'Could not complete the request. Please try again.');
     }
 
-    const data = (await res.json()) as ApiResponse;
-    if (data && typeof data.answer === 'string') {
-      if (data.conversation_id) {
-        this.currentSessionId.set(data.conversation_id);
-        if (this.currentSessionTitle() === 'New Chat') {
-          this.currentSessionTitle.set(question.trim().slice(0, 36));
+    // Response confirmed: show assistant message bubble and activate real-time streaming
+    this.messages.update((prev) => [...prev, initialAssistantMessage]);
+    this.isLoading.set(false);
+    this.isStreamingActive.set(true);
+    this.scrollToBottom();
+
+    let accumulatedText = '';
+    const contentType = res.headers.get('content-type') || '';
+
+    // Check if response provides a readable stream (Server-Sent Events)
+    if (res.body && (contentType.includes('text/event-stream') || !contentType.includes('application/json'))) {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data:')) {
+              const rawData = trimmed.replace(/^data:\s*/, '').trim();
+              if (!rawData) continue;
+              try {
+                const parsed = JSON.parse(rawData);
+                if (parsed.error) {
+                  throw new Error(parsed.error);
+                }
+                if (parsed.token) {
+                  accumulatedText += parsed.token;
+                  const formatted = this.formatAnswer(accumulatedText);
+                  this.messages.update((msgs) =>
+                    msgs.map((m) =>
+                      m.id === assistantId
+                        ? { ...m, text: accumulatedText, formattedText: formatted, isStreaming: true }
+                        : m
+                    )
+                  );
+                  this.scrollToBottom();
+                }
+                if (parsed.conversation_id && !this.currentSessionId()) {
+                  this.currentSessionId.set(parsed.conversation_id);
+                  if (this.currentSessionTitle() === 'New Chat') {
+                    this.currentSessionTitle.set(question.trim().slice(0, 36));
+                  }
+                }
+                if (parsed.done && parsed.conversation_id) {
+                  this.currentSessionId.set(parsed.conversation_id);
+                }
+              } catch (parseErr: unknown) {
+                if (rawData && rawData !== '[DONE]') {
+                  accumulatedText += rawData;
+                  const formatted = this.formatAnswer(accumulatedText);
+                  this.messages.update((msgs) =>
+                    msgs.map((m) =>
+                      m.id === assistantId
+                        ? { ...m, text: accumulatedText, formattedText: formatted, isStreaming: true }
+                        : m
+                    )
+                  );
+                  this.scrollToBottom();
+                }
+              }
+            }
+          }
         }
-        this.loadSavedConversations();
+      } catch (streamErr: unknown) {
+        if ((streamErr as { name?: string })?.name === 'AbortError') {
+          this.messages.update((msgs) =>
+            msgs.map((m) => (m.id === assistantId ? { ...m, isStreaming: false } : m))
+          );
+          return;
+        }
+        throw streamErr;
       }
-      return data.answer;
+    } else {
+      // Fallback: standard JSON payload
+      const data = (await res.json()) as ApiResponse;
+      if (data && typeof data.answer === 'string') {
+        accumulatedText = data.answer;
+        if (data.conversation_id) {
+          this.currentSessionId.set(data.conversation_id);
+          if (this.currentSessionTitle() === 'New Chat') {
+            this.currentSessionTitle.set(question.trim().slice(0, 36));
+          }
+        }
+      }
     }
 
-    throw new Error('No response was generated. Please try asking again.');
+    // Finalize assistant message with full markdown formatting
+    const finalFormatted = this.formatAnswer(accumulatedText);
+    this.messages.update((msgs) =>
+      msgs.map((m) =>
+        m.id === assistantId
+          ? {
+              ...m,
+              text: accumulatedText,
+              formattedText: finalFormatted,
+              isStreaming: false,
+            }
+          : m
+      )
+    );
+    this.isStreamingActive.set(false);
+    this.playCompletionChime();
+    this.loadSavedConversations();
+    this.scrollToBottom();
   }
 
   formatAnswer(text: string): SafeHtml {

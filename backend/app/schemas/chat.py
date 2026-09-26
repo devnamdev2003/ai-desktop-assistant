@@ -41,6 +41,7 @@ class ConversationRead(ConversationBase):
 class ChatRequest(BaseModel):
     question: str
     conversation_id: Optional[int] = None
+    stream: Optional[bool] = True
 
 
 class ChatResponse(BaseModel):
