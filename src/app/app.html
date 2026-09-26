@@ -88,8 +88,8 @@
   @if (isExpanded) {
   <div id="aivora-expanded-panel"
     [class]="isMaximized()
-        ? 'flex flex-col h-full w-full rounded-none overflow-hidden border-0 bg-slate-950 shadow-none transition-all duration-150'
-        : 'flex flex-col h-[540px] w-[420px] max-w-[95vw] max-h-[92vh] rounded-3xl overflow-hidden border border-white/10 bg-slate-950/95 shadow-2xl shadow-black/80 backdrop-blur-2xl transition-all duration-300'">
+        ? 'relative flex flex-col h-full w-full rounded-none overflow-hidden border-0 bg-slate-950 shadow-none transition-all duration-150'
+        : 'relative flex flex-col h-[540px] w-[420px] max-w-[95vw] max-h-[92vh] rounded-3xl overflow-hidden border border-white/10 bg-slate-950/95 shadow-2xl shadow-black/80 backdrop-blur-2xl transition-all duration-300'">
 
     <!-- HEADER / DRAG AREA (DESKTOP APP TITLEBAR) -->
 
@@ -110,42 +110,31 @@
 
       <!-- RIGHT: HEADER ACTIONS & DESKTOP WINDOW CONTROLS -->
       <div class="flex items-center gap-1.5">
-        <!-- SETTINGS & PROFILE BUTTON (WHEN LOGGED IN) -->
-        @if (authService.isAuthenticated()) {
-        <button id="header-settings-btn" type="button" (mousedown)="$event.stopPropagation()"
-          (click)="openAuthModal('profile')" title="Settings & Profile (Update profile, conversations, sign out)" aria-label="Settings"
-          class="relative flex h-7 items-center gap-1.5 px-2.5 rounded-lg text-xs font-medium transition cursor-pointer bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10">
-          @if (authService.currentUser()?.avatar_url) {
-            <img [src]="authService.currentUser()?.avatar_url" class="h-4 w-4 rounded-full object-cover" alt="Avatar" />
+        <!-- USER PROFILE BUTTON (Shows user profile details and security options) -->
+        <button id="header-profile-btn" type="button" (mousedown)="$event.stopPropagation()"
+          (click)="openProfileModal(authService.isAuthenticated() ? 'profile' : 'signin')"
+          [title]="authService.isAuthenticated() ? 'User Profile & Security' : 'Sign In'"
+          aria-label="Profile"
+          class="flex h-7 w-7 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition cursor-pointer">
+          @if (authService.isAuthenticated() && authService.currentUser()?.avatar_url) {
+            <img [src]="authService.currentUser()?.avatar_url" class="h-5 w-5 rounded-full object-cover border border-purple-400/40" alt="Profile" />
+          } @else if (authService.isAuthenticated()) {
+            <div class="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-[10px] font-bold text-white shadow-sm">
+              {{ authService.currentUser()?.email?.charAt(0)?.toUpperCase() || 'U' }}
+            </div>
           } @else {
-            <svg class="h-3.5 w-3.5 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           }
-          <span class="text-[11px] max-w-[80px] truncate hidden sm:inline">{{ authService.currentUser()?.full_name || 'Settings' }}</span>
         </button>
-        }
-
-        <!-- PENDING APP UPDATE BUTTON (ONLY SHOWN IF UPDATE AVAILABLE) -->
-        @if (availableUpdate()) {
-        <button id="check-update-btn" type="button" (mousedown)="$event.stopPropagation()"
-          (click)="openUpdateModal()"
-          title="Update available! Click to update"
-          class="relative flex h-7 items-center gap-1 px-2 rounded-lg text-xs font-medium transition cursor-pointer bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
-          <svg class="h-3.5 w-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          <span class="text-[11px] font-semibold text-emerald-300">Update</span>
-        </button>
-        }
 
         <!-- CLEAR CONVERSATION -->
         @if (messages().length > 0) {
         <button id="clear-chat-btn" type="button" (mousedown)="$event.stopPropagation()" (click)="clearChat()"
           title="Clear conversation" aria-label="Clear conversation" class="flex h-7 w-7 items-center justify-center rounded-lg
-                     bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white">
+                     bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white cursor-pointer">
           <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -198,9 +187,6 @@
       </div>
 
     </div>
-
-
-    <!-- MAIN SCROLLABLE CONTENT AREA -->
 
     <div #messagesContainer id="messages-scroll-area" class="flex-1 overflow-y-auto select-text"
       [class]="isMaximized() ? 'px-6 md:px-12 py-6 space-y-6' : 'px-5 py-4 space-y-4'">
@@ -655,7 +641,7 @@
       </button>
 
       <!-- Header -->
-      <div class="flex items-center gap-3 border-b border-white/10 pb-4 mb-3 shrink-0">
+      <div class="flex items-center gap-3 border-b border-white/10 pb-3.5 mb-3.5 shrink-0">
         <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30">
           <svg class="h-5 w-5 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -664,14 +650,14 @@
         <div>
           <h3 class="text-sm font-semibold text-white">
             @if (authService.isAuthenticated()) {
-              Account & Settings
+              Account & Profile
             } @else {
               Aivora Account
             }
           </h3>
           <p class="text-xs text-white/50">
             @if (authService.isAuthenticated()) {
-              Manage profile, saved chats, and sign out
+              Manage personal profile details and security
             } @else {
               Sign in or create an account
             }
@@ -679,12 +665,31 @@
         </div>
       </div>
 
-      <!-- Navigation Tabs -->
-      <div class="flex rounded-xl bg-white/5 p-1 mb-4 border border-white/10 shrink-0">
-        @if (!authService.isAuthenticated()) {
+      <!-- Navigation Tabs (Only 2 Sections: Profile and Security) -->
+      @if (authService.isAuthenticated()) {
+      <div class="flex rounded-xl bg-white/5 p-1 mb-3.5 border border-white/10 shrink-0">
+        <button type="button" (click)="activeProfileTab.set('profile')"
+          class="flex-1 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer text-center flex items-center justify-center gap-1.5"
+          [class]="activeProfileTab() === 'profile' ? 'bg-purple-600 text-white shadow' : 'text-white/60 hover:text-white'">
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <span>Profile</span>
+        </button>
+        <button type="button" (click)="activeProfileTab.set('security'); loadUserLoginSessions()"
+          class="flex-1 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer text-center flex items-center justify-center gap-1.5"
+          [class]="activeProfileTab() === 'security' ? 'bg-purple-600 text-white shadow' : 'text-white/60 hover:text-white'">
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          <span>Security</span>
+        </button>
+      </div>
+      } @else {
+      <div class="flex rounded-xl bg-white/5 p-1 mb-3.5 border border-white/10 shrink-0">
         <button type="button" (click)="setAuthMode('signin')"
           class="flex-1 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer text-center"
-          [class]="authMode() !== 'signup' ? 'bg-purple-600 text-white shadow' : 'text-white/60 hover:text-white'">
+          [class]="authMode() === 'signin' ? 'bg-purple-600 text-white shadow' : 'text-white/60 hover:text-white'">
           Sign In
         </button>
         <button type="button" (click)="setAuthMode('signup')"
@@ -692,19 +697,8 @@
           [class]="authMode() === 'signup' ? 'bg-purple-600 text-white shadow' : 'text-white/60 hover:text-white'">
           Create Account
         </button>
-        } @else {
-        <button type="button" (click)="setAuthMode('profile')"
-          class="flex-1 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer text-center"
-          [class]="authMode() === 'profile' ? 'bg-purple-600 text-white shadow' : 'text-white/60 hover:text-white'">
-          Profile & Settings
-        </button>
-        <button type="button" (click)="setAuthMode('profile'); loadSavedConversations()"
-          class="flex-1 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer text-center"
-          [class]="savedConversations().length > 0 ? 'text-white/80' : 'text-white/60 hover:text-white'">
-          Saved Chats ({{ savedConversations().length }})
-        </button>
-        }
       </div>
+      }
 
       <!-- Scrollable Tab Content Container -->
       <div class="overflow-y-auto no-scrollbar space-y-3.5 max-h-[78vh]">
@@ -728,16 +722,23 @@
         </div>
         }
 
-        <!-- TAB 1: MANUAL SIGN IN -->
-        @if (authMode() !== 'signup' && !authService.isAuthenticated()) {
+        @if (sessionsFeedbackMessage()) {
+        <div class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300 flex items-center gap-2">
+          <svg class="h-4 w-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>{{ sessionsFeedbackMessage() }}</span>
+        </div>
+        }
+
+        <!-- GUEST: SIGN IN -->
+        @if (authMode() === 'signin' && !authService.isAuthenticated()) {
         <form (submit)="$event.preventDefault(); submitManualLogin()" class="space-y-3">
           <div>
             <label class="block text-[11px] font-medium text-white/70 mb-1">Email Address</label>
-            <div class="relative">
-              <input type="email" [value]="loginEmail()" (input)="loginEmail.set($any($event.target).value)"
-                required placeholder="name@example.com"
-                class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
-            </div>
+            <input type="email" [value]="loginEmail()" (input)="loginEmail.set($any($event.target).value)"
+              required placeholder="name@example.com"
+              class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
           </div>
 
           <div>
@@ -747,18 +748,16 @@
                 {{ showPassword() ? 'Hide' : 'Show' }}
               </button>
             </div>
-            <div class="relative">
-              <input [type]="showPassword() ? 'text' : 'password'" [value]="loginPassword()" (input)="loginPassword.set($any($event.target).value)"
-                required placeholder="Enter your password"
-                class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
-            </div>
+            <input [type]="showPassword() ? 'text' : 'password'" [value]="loginPassword()" (input)="loginPassword.set($any($event.target).value)"
+              required placeholder="Enter your password"
+              class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
           </div>
 
           <button id="modal-manual-login-btn" type="submit" [disabled]="authService.isLoading()"
             class="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 px-4 py-2.5 text-xs font-semibold text-white shadow-lg active:scale-[0.98] transition cursor-pointer disabled:opacity-50">
             @if (authService.isLoading()) {
               <svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-              <span>Verifying credentials...</span>
+              <span>Signing in...</span>
             } @else {
               <span>Sign In to Aivora</span>
             }
@@ -767,7 +766,7 @@
           <!-- Divider -->
           <div class="relative flex items-center justify-center my-2.5">
             <div class="w-full border-t border-white/10"></div>
-            <span class="absolute bg-slate-900 px-2 text-[10px] text-white/40 uppercase tracking-wider">or continue with</span>
+            <span class="absolute bg-slate-900 px-2 text-[10px] text-white/40 uppercase tracking-wider">or</span>
           </div>
 
           <!-- Google OAuth Alternative -->
@@ -791,7 +790,7 @@
         </form>
         }
 
-        <!-- TAB 2: MANUAL SIGN UP -->
+        <!-- GUEST: SIGN UP -->
         @if (authMode() === 'signup' && !authService.isAuthenticated()) {
         <form (submit)="$event.preventDefault(); submitManualRegister()" class="space-y-2.5">
           <div>
@@ -810,7 +809,7 @@
 
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label class="block text-[11px] font-medium text-white/70">Create Password (min 6 chars) *</label>
+              <label class="block text-[11px] font-medium text-white/70">Password (min 6 chars) *</label>
               <button type="button" (click)="toggleShowSignupPassword()" class="text-[10px] text-purple-300 hover:underline cursor-pointer">
                 {{ showSignupPassword() ? 'Hide' : 'Show' }}
               </button>
@@ -831,9 +830,9 @@
             class="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-4 py-2.5 text-xs font-semibold text-white shadow-lg active:scale-[0.98] transition cursor-pointer disabled:opacity-50">
             @if (authService.isLoading()) {
               <svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-              <span>Creating user account...</span>
+              <span>Creating account...</span>
             } @else {
-              <span>Create Account & Sign In</span>
+              <span>Create Account</span>
             }
           </button>
 
@@ -846,99 +845,232 @@
         </form>
         }
 
-        <!-- TAB 3: USER PROFILE & DATA MANAGEMENT -->
-        @if (authMode() === 'profile' && authService.isAuthenticated()) {
-        <div class="space-y-4">
-          <!-- Profile Card -->
-          <div class="flex items-center gap-3.5 rounded-xl bg-white/5 border border-white/10 p-3.5">
-            @if (authService.currentUser()?.avatar_url) {
-              <img [src]="authService.currentUser()?.avatar_url" class="h-12 w-12 rounded-full object-cover border border-purple-500/30" alt="Avatar" />
-            } @else {
-              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-base font-bold text-white shadow-lg">
-                {{ authService.currentUser()?.email?.charAt(0)?.toUpperCase() || 'U' }}
-              </div>
-            }
-            <div class="min-w-0 flex-1">
-              <h4 class="text-sm font-semibold text-white truncate">
-                {{ authService.currentUser()?.full_name || 'Aivora User' }}
-              </h4>
-              <p class="text-xs text-white/60 truncate">{{ authService.currentUser()?.email }}</p>
-              <div class="mt-1 flex items-center gap-2">
-                <span class="rounded bg-emerald-500/20 border border-emerald-500/30 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-300">
-                  {{ authService.currentUser()?.google_id ? 'Google Account' : 'Email Account' }}
-                </span>
-                <span class="rounded bg-purple-500/20 border border-purple-500/30 px-1.5 py-0.5 text-[9px] font-semibold text-purple-300">
-                  Cloud Sync
-                </span>
-              </div>
-            </div>
-          </div>
+        <!-- SECTION 1: USER PROFILE (DETAILS + VALIDATED EDIT) -->
+        @if (authService.isAuthenticated() && activeProfileTab() === 'profile') {
+        <div class="space-y-3.5">
 
-          <!-- Edit Profile Form -->
-          <div class="rounded-xl border border-white/10 bg-white/5 p-3.5 space-y-3">
-            <h5 class="text-xs font-semibold text-white">Manage Profile Details</h5>
-            <div>
-              <label class="block text-[11px] font-medium text-white/60 mb-1">Display Name</label>
-              <input type="text" [value]="profileFullNameInput()" (input)="profileFullNameInput.set($any($event.target).value)"
-                placeholder="Full name"
-                class="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500" />
+          <!-- View Profile Details Mode -->
+          @if (!isEditingProfile()) {
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-4">
+            <div class="flex items-center gap-3.5">
+              @if (authService.currentUser()?.avatar_url) {
+                <img [src]="authService.currentUser()?.avatar_url" class="h-14 w-14 rounded-full object-cover border border-purple-500/40 shadow-md" alt="Avatar" />
+              } @else {
+                <div class="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-lg font-bold text-white shadow-lg">
+                  {{ authService.currentUser()?.email?.charAt(0)?.toUpperCase() || 'U' }}
+                </div>
+              }
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <h4 class="text-sm font-semibold text-white truncate">
+                    {{ authService.currentUser()?.full_name || 'Aivora User' }}
+                  </h4>
+                  <span class="rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.2 text-[9px] font-mono">
+                    Active
+                  </span>
+                </div>
+                <p class="text-xs text-white/60 truncate mt-0.5">{{ authService.currentUser()?.email }}</p>
+                <div class="mt-1.5 flex items-center gap-1.5">
+                  <span class="rounded bg-white/10 text-white/70 px-2 py-0.5 text-[10px]">
+                    {{ authService.currentUser()?.google_id ? 'Google Account' : 'Email & Password Account' }}
+                  </span>
+                </div>
+              </div>
             </div>
+
+            <!-- Profile Details Summary Grid -->
+            <div class="grid grid-cols-2 gap-2 pt-1 text-xs">
+              <div class="rounded-xl bg-black/30 border border-white/5 p-2.5">
+                <span class="text-[10px] text-white/40 block">Full Name</span>
+                <span class="font-medium text-white truncate block mt-0.5">{{ authService.currentUser()?.full_name || 'Not provided' }}</span>
+              </div>
+              <div class="rounded-xl bg-black/30 border border-white/5 p-2.5">
+                <span class="text-[10px] text-white/40 block">Primary Email</span>
+                <span class="font-medium text-white truncate block mt-0.5">{{ authService.currentUser()?.email }}</span>
+              </div>
+            </div>
+
+            <!-- Edit Profile Trigger Button -->
+            <button id="edit-profile-btn" type="button" (click)="toggleEditProfile(true)"
+              class="w-full flex items-center justify-center gap-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-200 py-2.5 text-xs font-semibold transition cursor-pointer">
+              <svg class="h-3.5 w-3.5 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              <span>Edit Profile</span>
+            </button>
+          </div>
+          }
+
+          <!-- Edit Profile Form Mode (Name, Email only - NO passwords, with proper validation) -->
+          @if (isEditingProfile()) {
+          <div class="rounded-2xl border border-purple-500/30 bg-white/5 p-4 space-y-3.5">
+            <div class="flex items-center justify-between border-b border-white/10 pb-2.5">
+              <div>
+                <h4 class="text-xs font-semibold text-white">Edit Profile</h4>
+                <p class="text-[11px] text-white/50">Update your display name and email address</p>
+              </div>
+              <button type="button" (click)="toggleEditProfile(false)" class="text-[11px] text-white/40 hover:text-white cursor-pointer">
+                Cancel
+              </button>
+            </div>
+
+            <!-- Validation Error Alert -->
+            @if (profileValidationError()) {
+            <div class="rounded-xl border border-red-500/30 bg-red-500/10 p-2.5 text-xs text-red-300 flex items-start gap-2">
+              <svg class="h-4 w-4 text-red-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span class="flex-1 leading-relaxed">{{ profileValidationError() }}</span>
+            </div>
+            }
+
             <div>
-              <label class="block text-[11px] font-medium text-white/60 mb-1">Avatar Image URL</label>
+              <label class="block text-[11px] font-medium text-white/70 mb-1">Full Name *</label>
+              <input type="text" [value]="profileFullNameInput()" (input)="profileFullNameInput.set($any($event.target).value)"
+                required placeholder="Enter your full name"
+                class="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-medium text-white/70 mb-1">Email Address *</label>
+              <input type="email" [value]="profileEmailInput()" (input)="profileEmailInput.set($any($event.target).value)"
+                required placeholder="name@example.com"
+                class="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-medium text-white/70 mb-1">Avatar Image URL (Optional)</label>
               <input type="url" [value]="profileAvatarUrlInput()" (input)="profileAvatarUrlInput.set($any($event.target).value)"
                 placeholder="https://..."
-                class="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500" />
+                class="w-full rounded-xl bg-black/40 border border-white/10 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
             </div>
-            <div class="flex justify-end">
-              <button type="button" (click)="saveProfile()" [disabled]="isUpdatingProfile()"
-                class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-medium text-white transition disabled:opacity-50 cursor-pointer">
-                {{ isUpdatingProfile() ? 'Saving...' : 'Save Profile Changes' }}
-              </button>
-            </div>
-          </div>
 
-          <!-- Saved Conversations -->
-          <div class="rounded-xl border border-white/10 bg-white/5 p-3.5 space-y-2">
-            <div class="flex items-center justify-between">
-              <h5 class="text-xs font-semibold text-white">Saved Conversations</h5>
-              <button type="button" (click)="loadSavedConversations()" [disabled]="isLoadingConversations()"
-                class="text-[11px] text-purple-300 hover:underline cursor-pointer">
-                {{ isLoadingConversations() ? 'Loading...' : 'Refresh List' }}
+            <div class="flex items-center justify-end gap-2 pt-1">
+              <button type="button" (click)="toggleEditProfile(false)"
+                class="px-3.5 py-2 rounded-xl text-xs font-medium text-white/60 hover:text-white bg-white/5 hover:bg-white/10 transition cursor-pointer">
+                Cancel
               </button>
-            </div>
-            @if (savedConversations().length === 0) {
-              <p class="text-[11px] text-white/40 italic py-1">No saved conversations yet. Conversations are automatically backed up as you chat.</p>
-            } @else {
-              <div class="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar pr-1">
-                @for (c of savedConversations(); track c.id) {
-                  <div class="flex items-center justify-between rounded-lg bg-black/30 border border-white/5 px-2.5 py-1.5 text-[11px] text-white/80">
-                    <span class="truncate max-w-[240px] font-medium">{{ c.title }}</span>
-                    <button type="button" (click)="deleteSavedConversation(c.id, $event)"
-                      title="Delete conversation" class="text-red-400 hover:text-red-300 p-0.5 cursor-pointer">
-                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
+              <button id="save-profile-btn" type="button" (click)="saveProfile()" [disabled]="isUpdatingProfile()"
+                class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 shadow transition disabled:opacity-50 cursor-pointer">
+                @if (isUpdatingProfile()) {
+                  <svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  <span>Saving...</span>
+                } @else {
+                  <span>Save Changes</span>
                 }
-              </div>
-            }
+              </button>
+            </div>
           </div>
+          }
 
-          <!-- Sign Out Button -->
-          <div class="flex justify-between items-center pt-2">
-            <button id="modal-signout-btn" type="button" (click)="logout($event)"
-              class="px-4 py-2 rounded-xl text-xs font-medium text-red-300 hover:text-red-200 bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 transition cursor-pointer">
-              Sign Out
-            </button>
-            <button type="button" (click)="closeAuthModal()"
-              class="px-4 py-2 rounded-xl text-xs font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/15 transition cursor-pointer">
-              Done
-            </button>
-          </div>
         </div>
         }
 
+        <!-- SECTION 2: SECURITY (ACTIVE LOGIN SESSIONS, LOGOUT ALL, UPDATES, & LOGOUT) -->
+        @if (authService.isAuthenticated() && activeProfileTab() === 'security') {
+        <div class="space-y-3.5">
+
+          <!-- 1. Active Account Login Sessions (Real account sessions across devices) -->
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-xs font-semibold text-white flex items-center gap-1.5">
+                  <span>Active Login Sessions</span>
+                  <span class="rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1.5 py-0.2 text-[9px] font-mono">
+                    {{ activeSessionsCount() }} Active
+                  </span>
+                </h4>
+                <p class="text-[11px] text-white/50 mt-0.5">Manage devices and logins currently signed into your account</p>
+              </div>
+              <button type="button" (click)="loadUserLoginSessions()" [disabled]="isLoadingUserSessions()"
+                class="text-[11px] text-purple-300 hover:underline cursor-pointer">
+                {{ isLoadingUserSessions() ? 'Refreshing...' : 'Refresh' }}
+              </button>
+            </div>
+
+            <!-- Sessions List -->
+            <div class="space-y-2">
+              @for (sess of userSessions(); track sess.id) {
+              <div class="flex items-center justify-between rounded-xl bg-black/30 border border-white/5 p-2.5 text-xs text-white/80">
+                <div class="flex items-center gap-2.5 truncate flex-1 min-w-0">
+                  <div class="h-7 w-7 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                    <svg class="h-3.5 w-3.5 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div class="truncate">
+                    <div class="flex items-center gap-1.5">
+                      <span class="font-medium text-white text-[11px]">{{ sess.device || 'Active Device' }}</span>
+                      @if (sess.is_current || sess.id === 'current') {
+                        <span class="text-[8px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1 py-0.2 rounded font-mono">Current</span>
+                      }
+                    </div>
+                    <span class="text-[10px] text-white/40 block truncate">Session ID: {{ sess.id }}</span>
+                  </div>
+                </div>
+                <div class="text-[10px] text-white/40 text-right shrink-0 ml-2">
+                  <span class="text-emerald-400 font-medium">Active</span>
+                </div>
+              </div>
+              }
+            </div>
+
+            <!-- Logout All Sessions Action Button -->
+            <button id="logout-all-sessions-btn" type="button" (click)="logoutAllUserSessions()" [disabled]="isLoggingOutAllSessions()"
+              class="w-full flex items-center justify-center gap-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-200 py-2.5 text-xs font-semibold transition cursor-pointer disabled:opacity-50">
+              @if (isLoggingOutAllSessions()) {
+                <svg class="h-3.5 w-3.5 animate-spin text-amber-300" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <span>Revoking All Active Sessions...</span>
+              } @else {
+                <svg class="h-3.5 w-3.5 text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>Logout All Sessions</span>
+              }
+            </button>
+          </div>
+
+          <!-- 2. Software Updates -->
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4 flex items-center justify-between">
+            <div>
+              <h4 class="text-xs font-semibold text-white">Software Updates</h4>
+              <p class="text-[11px] text-white/50 mt-0.5">Running Aivora Desktop v{{ currentAppVersion() }}</p>
+            </div>
+            <button id="security-check-update-btn" type="button" (click)="checkForUpdates(true)" [disabled]="isCheckingUpdate()"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/30 text-xs font-medium transition cursor-pointer disabled:opacity-50">
+              <svg class="h-3.5 w-3.5 text-purple-300" [class.animate-spin]="isCheckingUpdate()" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>{{ isCheckingUpdate() ? 'Checking...' : 'Check for Updates' }}</span>
+            </button>
+          </div>
+
+          <!-- 3. Current Account Sign Out -->
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4 flex items-center justify-between">
+            <div>
+              <h4 class="text-xs font-semibold text-white">Sign Out</h4>
+              <p class="text-[11px] text-white/50 mt-0.5">Sign out of your account on this device</p>
+            </div>
+            <button id="security-logout-btn" type="button" (click)="logout($event)"
+              class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-200 text-xs font-semibold transition cursor-pointer">
+              <svg class="h-3.5 w-3.5 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>Sign Out</span>
+            </button>
+          </div>
+
+        </div>
+        }
+
+      </div>
+
+      <!-- Persistent Modal Footer -->
+      <div class="flex justify-end items-center pt-3 mt-2 border-t border-white/10 shrink-0">
+        <button type="button" (click)="closeAuthModal()"
+          class="px-4 py-1.5 rounded-lg text-xs font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/15 transition cursor-pointer">
+          Done
+        </button>
       </div>
 
     </div>

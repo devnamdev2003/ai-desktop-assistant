@@ -21,12 +21,49 @@ export interface TokenResponse {
   user: UserProfile;
 }
 
+export interface ActiveUserSession {
+  id: string | number;
+  device?: string;
+  created_at: string;
+  expires_at: string;
+  is_current?: boolean;
+}
+
+export interface UserSessionsResponse {
+  active_sessions_count: number;
+  sessions: ActiveUserSession[];
+}
+
 export interface SavedConversation {
   id: number;
   user_id: string;
   title: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface SavedChatMessage {
+  id?: number | string;
+  conversation_id?: number | string;
+  sender: 'user' | 'assistant';
+  text: string;
+  created_at?: string;
+}
+
+export interface ConversationDetail extends SavedConversation {
+  messages: SavedChatMessage[];
+}
+
+export interface SessionMetadata {
+  sessionId: string;
+  userEmail: string;
+  userName: string;
+  authProvider: 'google' | 'email';
+  issuedAt?: Date;
+  expiresAt?: Date;
+  expiresInMinutes?: number;
+  isExpired: boolean;
+  platform: string;
 }
 
 @Injectable({
@@ -258,7 +295,7 @@ export class AuthService {
   /**
    * Updates the authenticated user's profile on the FastAPI backend.
    */
-  async updateProfile(fullName?: string, avatarUrl?: string): Promise<UserProfile | null> {
+  async updateProfile(fullName?: string, email?: string, avatarUrl?: string): Promise<UserProfile | null> {
     const token = this.accessToken;
     if (!token) return null;
 
@@ -275,6 +312,7 @@ export class AuthService {
         },
         body: JSON.stringify({
           full_name: fullName !== undefined ? fullName : undefined,
+          email: email !== undefined ? email : undefined,
           avatar_url: avatarUrl !== undefined ? avatarUrl : undefined,
         }),
       });
@@ -294,6 +332,56 @@ export class AuthService {
     } catch (err: any) {
       this.authError.set(err.message || 'Profile update failed');
       return null;
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Fetches the user's active login sessions across devices from FastAPI.
+   */
+  async getActiveSessions(): Promise<UserSessionsResponse | null> {
+    const token = this.accessToken;
+    if (!token) return null;
+
+    const endpoint = this.configService.getFullUrl('/api/v1/users/me/sessions');
+    try {
+      const res = await fetch(endpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Revokes all active login sessions for the user across all devices.
+   */
+  async logoutAllSessions(): Promise<boolean> {
+    const token = this.accessToken;
+    if (!token) return false;
+
+    this.isLoading.set(true);
+    const endpoint = this.configService.getFullUrl('/api/v1/users/me/sessions/logout-all');
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        this.logout();
+        return true;
+      }
+      return false;
+    } catch {
+      this.logout();
+      return true;
     } finally {
       this.isLoading.set(false);
     }
@@ -594,6 +682,75 @@ export class AuthService {
       // Ignored
     }
     return [];
+  }
+
+  /**
+   * Fetches full detail of a conversation session including message history.
+   */
+  async getConversation(conversationId: number | string): Promise<ConversationDetail | null> {
+    const token = this.accessToken;
+    if (!token) return null;
+
+    try {
+      const endpoint = this.configService.getFullUrl(`/api/v1/chat/conversations/${conversationId}`);
+      const res = await fetch(endpoint, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Ignored
+    }
+    return null;
+  }
+
+  /**
+   * Decodes JWT token payload and extracts active authentication session metadata.
+   */
+  getSessionMetadata(): SessionMetadata | null {
+    const user = this.currentUser();
+    const token = this.accessToken;
+    if (!user || !token) return null;
+
+    let exp: Date | undefined;
+    let iat: Date | undefined;
+    let expiresInMinutes: number | undefined;
+    let isExpired = false;
+
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payloadStr = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+        const payload = JSON.parse(payloadStr);
+        if (payload.exp) {
+          exp = new Date(payload.exp * 1000);
+          expiresInMinutes = Math.max(0, Math.round((exp.getTime() - Date.now()) / (1000 * 60)));
+          isExpired = Date.now() >= exp.getTime();
+        }
+        if (payload.iat) {
+          iat = new Date(payload.iat * 1000);
+        }
+      }
+    } catch {
+      // Token parsing fallback
+    }
+
+    const platform = typeof window !== 'undefined' && ((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__)
+      ? 'Aivora Desktop App'
+      : 'Aivora Web Client';
+
+    return {
+      sessionId: `sess_${user.id.slice(0, 8)}`,
+      userEmail: user.email,
+      userName: user.full_name || 'Aivora User',
+      authProvider: user.google_id ? 'google' : 'email',
+      issuedAt: iat,
+      expiresAt: exp,
+      expiresInMinutes,
+      isExpired,
+      platform,
+    };
   }
 
   /**

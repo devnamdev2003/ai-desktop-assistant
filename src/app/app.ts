@@ -1,10 +1,10 @@
-import { Component, ElementRef, inject, signal, ViewChild } from '@angular/core';
+import { Component, ElementRef, inject, signal, computed, ViewChild } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow, LogicalSize, Window } from '@tauri-apps/api/window';
 import { marked } from 'marked';
 import { check, Update } from '@tauri-apps/plugin-updater';
-import { AuthService, SavedConversation, UserProfile } from './services/auth';
+import { AuthService, SavedConversation, UserProfile, SessionMetadata, ConversationDetail, ActiveUserSession } from './services/auth';
 import { ConfigService } from './services/config';
 
 export interface UpdateInfo {
@@ -28,6 +28,7 @@ export interface ChatMessage {
 interface ApiResponse {
   question: string;
   answer: string;
+  conversation_id?: number | null;
 }
 
 export interface PromptSuggestion {
@@ -118,11 +119,42 @@ export class App {
   showUpdateModal = signal(false);
   private tauriUpdateHandle: Update | null = null;
 
-  // Authentication & User State
+  // Authentication & Profile State
   authService = inject(AuthService);
   configService = inject(ConfigService);
   showAuthModal = signal(false);
   authMode = signal<'signin' | 'signup' | 'profile'>('signin');
+  // Only two sections: 'profile' and 'security'
+  activeProfileTab = signal<'profile' | 'security'>('profile');
+
+  // Profile Management & Edit Mode
+  isEditingProfile = signal<boolean>(false);
+  profileFullNameInput = signal<string>('');
+  profileEmailInput = signal<string>('');
+  profileAvatarUrlInput = signal<string>('');
+  profileValidationError = signal<string | null>(null);
+  isUpdatingProfile = signal<boolean>(false);
+
+  // Security: Account Login Sessions (to check active login sessions and logout all)
+  userSessions = signal<ActiveUserSession[]>([]);
+  activeSessionsCount = signal<number>(1);
+  isLoadingUserSessions = signal<boolean>(false);
+  isLoggingOutAllSessions = signal<boolean>(false);
+  sessionsFeedbackMessage = signal<string | null>(null);
+
+  // App Settings Preferences
+  soundEffectsEnabled = signal<boolean>(
+    typeof localStorage !== 'undefined' ? localStorage.getItem('aivora_sound') !== 'false' : true
+  );
+  cacheClearedFeedback = signal<string | null>(null);
+
+  // Active Chat Context
+  currentSessionId = signal<number | null>(null);
+  currentSessionTitle = signal<string>('New Chat');
+  showSessionDrawer = signal<boolean>(false);
+  isRefreshingSession = signal<boolean>(false);
+  sessionRefreshFeedback = signal<string | null>(null);
+  sessionMetadata = computed(() => this.authService.getSessionMetadata());
 
   // Manual Login Form
   loginEmail = signal('');
@@ -135,11 +167,6 @@ export class App {
   signupPassword = signal('');
   signupConfirmPassword = signal('');
   showSignupPassword = signal(false);
-
-  // Profile Management Form
-  profileFullNameInput = signal('');
-  profileAvatarUrlInput = signal('');
-  isUpdatingProfile = signal(false);
 
   // API Configuration Input
   apiUrlInput = signal('');
@@ -327,19 +354,192 @@ export class App {
     this.showUpdateModal.set(false);
   }
 
-  openAuthModal(initialMode?: 'signin' | 'signup' | 'profile'): void {
+  openProfileModal(tab?: 'profile' | 'security' | 'signin' | 'signup'): void {
     this.showAuthModal.set(true);
-    this.testApiResult.set(null);
+    this.profileValidationError.set(null);
+    this.sessionsFeedbackMessage.set(null);
+    this.isEditingProfile.set(false);
+
     if (this.authService.isAuthenticated()) {
-      this.setAuthMode('profile');
+      this.authMode.set('profile');
+      this.activeProfileTab.set(tab === 'security' ? 'security' : 'profile');
+      this.initProfileInputs();
+      this.loadUserLoginSessions();
     } else {
-      this.setAuthMode(initialMode || 'signin');
+      this.setAuthMode(tab === 'signup' ? 'signup' : 'signin');
     }
+  }
+
+  openSettingsModal(tab?: string): void {
+    this.openProfileModal(tab === 'security' ? 'security' : 'profile');
+  }
+
+  openAuthModal(initialMode?: 'signin' | 'signup' | 'profile', initialProfileTab?: any): void {
+    this.openProfileModal(initialProfileTab === 'security' ? 'security' : initialMode);
   }
 
   closeAuthModal(): void {
     this.showAuthModal.set(false);
-    this.testApiResult.set(null);
+    this.profileValidationError.set(null);
+    this.sessionsFeedbackMessage.set(null);
+    this.isEditingProfile.set(false);
+  }
+
+  initProfileInputs(): void {
+    const user = this.authService.currentUser();
+    this.profileFullNameInput.set(user?.full_name || '');
+    this.profileEmailInput.set(user?.email || '');
+    this.profileAvatarUrlInput.set(user?.avatar_url || '');
+    this.profileValidationError.set(null);
+  }
+
+  toggleEditProfile(editing?: boolean): void {
+    const next = editing !== undefined ? editing : !this.isEditingProfile();
+    this.isEditingProfile.set(next);
+    if (next) {
+      this.initProfileInputs();
+    } else {
+      this.profileValidationError.set(null);
+    }
+  }
+
+  toggleSoundEffects(): void {
+    const next = !this.soundEffectsEnabled();
+    this.soundEffectsEnabled.set(next);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('aivora_sound', String(next));
+    }
+  }
+
+  playCompletionChime(): void {
+    if (!this.soundEffectsEnabled() || typeof window === 'undefined') return;
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    } catch {
+      // Audio autoplay policy fallback
+    }
+  }
+
+  exportUserData(): void {
+    const data = {
+      appName: 'Aivora Desktop Assistant',
+      exportedAt: new Date().toISOString(),
+      user: this.authService.currentUser(),
+      currentSession: {
+        id: this.currentSessionId(),
+        title: this.currentSessionTitle(),
+        messages: this.messages(),
+      },
+      savedConversations: this.savedConversations(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `aivora-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.authService.authSuccessMessage.set('User chat data exported successfully as JSON.');
+    setTimeout(() => this.authService.authSuccessMessage.set(null), 4000);
+  }
+
+  clearLocalCache(): void {
+    if (typeof localStorage !== 'undefined') {
+      const savedToken = localStorage.getItem('aivora_access_token');
+      const savedRefresh = localStorage.getItem('aivora_refresh_token');
+      const savedUrl = localStorage.getItem('aivora_api_url');
+      const savedSound = localStorage.getItem('aivora_sound');
+      localStorage.clear();
+      if (savedToken) localStorage.setItem('aivora_access_token', savedToken);
+      if (savedRefresh) localStorage.setItem('aivora_refresh_token', savedRefresh);
+      if (savedUrl) localStorage.setItem('aivora_api_url', savedUrl);
+      if (savedSound) localStorage.setItem('aivora_sound', savedSound);
+    }
+    this.cacheClearedFeedback.set('Local cache cleared successfully.');
+    setTimeout(() => this.cacheClearedFeedback.set(null), 3000);
+  }
+
+  toggleSessionDrawer(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const next = !this.showSessionDrawer();
+    this.showSessionDrawer.set(next);
+    if (next) {
+      this.loadSavedConversations();
+    }
+  }
+
+  closeSessionDrawer(): void {
+    this.showSessionDrawer.set(false);
+  }
+
+  startNewSession(): void {
+    this.currentSessionId.set(null);
+    this.currentSessionTitle.set('New Chat');
+    this.messages.set([]);
+    this.inputText.set('');
+    this.showSessionDrawer.set(false);
+    setTimeout(() => this.chatInputElement?.nativeElement?.focus(), 50);
+  }
+
+  async switchSession(session: SavedConversation): Promise<void> {
+    this.currentSessionId.set(session.id);
+    this.currentSessionTitle.set(session.title || 'Conversation');
+    this.showSessionDrawer.set(false);
+    this.showAuthModal.set(false);
+
+    try {
+      this.isLoading.set(true);
+      const detail = await this.authService.getConversation(session.id);
+      if (detail && detail.messages && detail.messages.length > 0) {
+        const loaded: ChatMessage[] = detail.messages.map((m, idx) => ({
+          id: `sess_msg_${m.id || idx}`,
+          sender: m.sender,
+          text: m.text,
+          formattedText: m.sender === 'assistant' ? this.formatAnswer(m.text) : undefined,
+          timestamp: m.created_at ? new Date(m.created_at) : new Date(),
+        }));
+        this.messages.set(loaded);
+      } else {
+        this.messages.set([]);
+      }
+      setTimeout(() => this.scrollToBottom(), 50);
+    } catch {
+      // Fallback
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  async refreshAuthSession(): Promise<void> {
+    this.isRefreshingSession.set(true);
+    this.sessionRefreshFeedback.set(null);
+    try {
+      const ok = await this.authService.refreshSession();
+      if (ok) {
+        this.sessionRefreshFeedback.set('Session successfully refreshed! Access token renewed.');
+      } else {
+        this.sessionRefreshFeedback.set('Session renewal failed. Please sign in again.');
+      }
+    } catch (err: any) {
+      this.sessionRefreshFeedback.set(`Refresh error: ${err.message || 'Failed to renew session'}`);
+    } finally {
+      this.isRefreshingSession.set(false);
+    }
   }
 
   setAuthMode(mode: 'signin' | 'signup' | 'profile'): void {
@@ -351,10 +551,8 @@ export class App {
     this.authService.authError.set(null);
     this.authService.authSuccessMessage.set(null);
     if (this.authMode() === 'profile' && this.authService.currentUser()) {
-      const user = this.authService.currentUser()!;
-      this.profileFullNameInput.set(user.full_name || '');
-      this.profileAvatarUrlInput.set(user.avatar_url || '');
-      this.loadSavedConversations();
+      this.initProfileInputs();
+      this.loadUserLoginSessions();
     }
   }
 
@@ -414,14 +612,82 @@ export class App {
   }
 
   async saveProfile(): Promise<void> {
+    const name = this.profileFullNameInput().trim();
+    const email = this.profileEmailInput().trim().toLowerCase();
+    const avatar = this.profileAvatarUrlInput().trim();
+
+    // Strict validation as explicitly instructed by user
+    if (!name || name.length < 2) {
+      this.profileValidationError.set('Full name must be at least 2 characters long.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      this.profileValidationError.set('Please enter a valid email address (e.g. name@example.com).');
+      return;
+    }
+
+    this.profileValidationError.set(null);
     this.isUpdatingProfile.set(true);
     try {
-      await this.authService.updateProfile(
-        this.profileFullNameInput().trim(),
-        this.profileAvatarUrlInput().trim()
+      const updated = await this.authService.updateProfile(
+        name,
+        email,
+        avatar || undefined
       );
+      if (updated) {
+        this.isEditingProfile.set(false);
+      }
     } finally {
       this.isUpdatingProfile.set(false);
+    }
+  }
+
+  async loadUserLoginSessions(): Promise<void> {
+    if (!this.authService.isAuthenticated()) return;
+    this.isLoadingUserSessions.set(true);
+    try {
+      const data = await this.authService.getActiveSessions();
+      if (data && data.sessions && data.sessions.length > 0) {
+        this.activeSessionsCount.set(data.active_sessions_count);
+        this.userSessions.set(data.sessions);
+      } else {
+        this.activeSessionsCount.set(1);
+        this.userSessions.set([
+          {
+            id: 'current',
+            device: 'Current Device (Aivora Desktop)',
+            created_at: new Date().toISOString(),
+            expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+            is_current: true,
+          }
+        ]);
+      }
+    } catch {
+      this.activeSessionsCount.set(1);
+    } finally {
+      this.isLoadingUserSessions.set(false);
+    }
+  }
+
+  async logoutAllUserSessions(): Promise<void> {
+    this.isLoggingOutAllSessions.set(true);
+    this.sessionsFeedbackMessage.set(null);
+    try {
+      const ok = await this.authService.logoutAllSessions();
+      if (ok) {
+        this.showAuthModal.set(false);
+        this.setAuthMode('signin');
+        this.messages.set([]);
+        this.inputText.set('');
+      } else {
+        this.sessionsFeedbackMessage.set('Could not revoke all sessions. Please try again.');
+      }
+    } catch (err: any) {
+      this.sessionsFeedbackMessage.set(err.message || 'Failed to logout all sessions.');
+    } finally {
+      this.isLoggingOutAllSessions.set(false);
     }
   }
 
@@ -442,6 +708,9 @@ export class App {
     const ok = await this.authService.deleteConversation(id);
     if (ok) {
       this.savedConversations.update((list) => list.filter((c) => c.id !== id));
+      if (this.currentSessionId() === id) {
+        this.startNewSession();
+      }
     }
   }
 
@@ -472,7 +741,11 @@ export class App {
     }
     this.authService.logout();
     this.showAuthModal.set(false);
+    this.showSessionDrawer.set(false);
     this.setAuthMode('signin');
+    this.currentSessionId.set(null);
+    this.currentSessionTitle.set('New Chat');
+    this.sessionRefreshFeedback.set(null);
     this.testApiResult.set(null);
     this.messages.set([]);
     this.inputText.set('');
@@ -882,11 +1155,13 @@ export class App {
           } else {
             this.isStreamingActive.set(false);
             this.activeStreamTimer = null;
+            this.playCompletionChime();
             resolve();
           }
         } else {
           this.isStreamingActive.set(false);
           this.activeStreamTimer = null;
+          this.playCompletionChime();
           resolve();
         }
       };
@@ -901,7 +1176,10 @@ export class App {
       throw new Error('Authentication required: Only authenticated users can access Aivora.');
     }
 
-    const payload = JSON.stringify({ question });
+    const payload = JSON.stringify({
+      question,
+      conversation_id: this.currentSessionId() || undefined,
+    });
     const authHeaders = {
       accept: 'application/json',
       'Content-Type': 'application/json',
@@ -942,6 +1220,13 @@ export class App {
 
     const data = (await res.json()) as ApiResponse;
     if (data && typeof data.answer === 'string') {
+      if (data.conversation_id) {
+        this.currentSessionId.set(data.conversation_id);
+        if (this.currentSessionTitle() === 'New Chat') {
+          this.currentSessionTitle.set(question.trim().slice(0, 36));
+        }
+        this.loadSavedConversations();
+      }
       return data.answer;
     }
 
@@ -965,6 +1250,11 @@ export class App {
     }
 
     const target = event.target as HTMLElement;
+    const sessionTrigger = target.closest('#session-switcher-btn') || target.closest('#aivora-session-drawer');
+    if (!sessionTrigger && this.showSessionDrawer()) {
+      this.showSessionDrawer.set(false);
+    }
+
     const btn = target.closest('.copy-code-btn') as HTMLButtonElement | null;
     if (btn) {
       event.preventDefault();
