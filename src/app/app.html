@@ -98,90 +98,48 @@
       class="flex cursor-move select-none items-center justify-between border-b border-white/10 shrink-0 bg-slate-900/90 backdrop-blur-xl"
       [class]="isMaximized() ? 'px-4 py-2.5' : 'px-3 py-2'">
 
-      <!-- LEFT: DESKTOP APP BOX -->
-      <div class="flex items-center gap-2.5">
-        <!-- App Box Container -->
-        <div class="flex items-center gap-2 rounded-xl bg-slate-800/80 border border-white/15 px-2.5 py-1.5 shadow-sm shadow-black/50 hover:border-white/25 transition">
-          <!-- Mini glowing Aivora orb -->
-          <div class="relative flex h-5 w-5 items-center justify-center rounded-full
-                     bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]
-                     border border-white/30 shadow-[0_0_8px_rgba(155,124,255,0.6)]"></div>
-
-          <!-- App Title & Badges -->
-          <div class="flex items-center gap-1.5">
-            <span class="text-xs font-bold tracking-wide text-white uppercase">Aivora</span>
-            <span class="rounded bg-purple-500/20 border border-purple-500/30 px-1.5 py-0.5 text-[9px] font-semibold text-purple-300">
-              DESKTOP
-            </span>
-            @if (isMaximized()) {
-            <span class="rounded bg-indigo-500/20 border border-indigo-500/30 px-1.5 py-0.5 text-[9px] font-semibold text-indigo-300">
-              FULL
-            </span>
-            }
-          </div>
-
-          <!-- Active Indicator -->
-          <div class="flex items-center gap-1 pl-1 border-l border-white/10 text-[10px] text-white/50">
-            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span class="hidden xs:inline sm:inline">Ready</span>
-          </div>
-        </div>
+      <!-- LEFT: BRAND LOGO -->
+      <div class="flex items-center gap-2">
+        <!-- Mini glowing Aivora orb -->
+        <div class="relative flex h-5 w-5 items-center justify-center rounded-full
+                   bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]
+                   border border-white/30 shadow-[0_0_8px_rgba(155,124,255,0.6)]"></div>
+        <span class="text-xs font-bold tracking-wider text-white uppercase">Aivora</span>
       </div>
 
 
       <!-- RIGHT: HEADER ACTIONS & DESKTOP WINDOW CONTROLS -->
-
       <div class="flex items-center gap-1.5">
-        <!-- GOOGLE AUTH / PROFILE BUTTON -->
-        @if (!authService.isAuthenticated()) {
-        <button id="google-login-btn" type="button" (mousedown)="$event.stopPropagation()"
-          (click)="openAuthModal()" title="Sign in with Google" aria-label="Sign in with Google"
-          class="relative flex h-7 items-center gap-1.5 px-2.5 rounded-lg text-xs font-medium transition cursor-pointer bg-white/5 text-white/80 hover:bg-white/10 hover:text-white border border-white/10">
-          <svg class="h-3.5 w-3.5 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-          </svg>
-          <span class="text-[11px] hidden sm:inline">Sign In</span>
-        </button>
-        } @else {
-        <button id="user-profile-btn" type="button" (mousedown)="$event.stopPropagation()"
-          (click)="openAuthModal()" [title]="authService.currentUser()?.email || 'User Profile'"
-          class="relative flex h-7 items-center gap-1.5 px-2 rounded-lg text-xs font-medium transition cursor-pointer bg-purple-500/20 text-purple-200 border border-purple-500/30 hover:bg-purple-500/30">
+        <!-- SETTINGS & PROFILE BUTTON (WHEN LOGGED IN) -->
+        @if (authService.isAuthenticated()) {
+        <button id="header-settings-btn" type="button" (mousedown)="$event.stopPropagation()"
+          (click)="openAuthModal('profile')" title="Settings & Profile (Update profile, conversations, sign out)" aria-label="Settings"
+          class="relative flex h-7 items-center gap-1.5 px-2.5 rounded-lg text-xs font-medium transition cursor-pointer bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10">
           @if (authService.currentUser()?.avatar_url) {
             <img [src]="authService.currentUser()?.avatar_url" class="h-4 w-4 rounded-full object-cover" alt="Avatar" />
           } @else {
-            <div class="flex h-4 w-4 items-center justify-center rounded-full bg-purple-600 text-[9px] font-bold text-white">
-              {{ authService.currentUser()?.email?.charAt(0)?.toUpperCase() || 'U' }}
-            </div>
+            <svg class="h-3.5 w-3.5 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
           }
-          <span class="text-[11px] max-w-[80px] truncate hidden sm:inline">{{ authService.currentUser()?.full_name || authService.currentUser()?.email }}</span>
+          <span class="text-[11px] max-w-[80px] truncate hidden sm:inline">{{ authService.currentUser()?.full_name || 'Settings' }}</span>
         </button>
         }
 
-        <!-- CHECK / INSTALL UPDATE BUTTON -->
+        <!-- PENDING APP UPDATE BUTTON (ONLY SHOWN IF UPDATE AVAILABLE) -->
+        @if (availableUpdate()) {
         <button id="check-update-btn" type="button" (mousedown)="$event.stopPropagation()"
-          (click)="availableUpdate() ? openUpdateModal() : checkForUpdates(true)"
-          [title]="availableUpdate() ? 'Update available! Click to update' : 'Check for app updates'"
-          [attr.aria-label]="availableUpdate() ? 'Update available! Click to update' : 'Check for app updates'"
-          class="relative flex h-7 items-center gap-1 px-2 rounded-lg text-xs font-medium transition cursor-pointer"
-          [class]="availableUpdate() ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'">
-          <svg class="h-3.5 w-3.5" [class.animate-spin]="isCheckingUpdate()" fill="none" viewBox="0 0 24 24"
-            stroke="currentColor">
+          (click)="openUpdateModal()"
+          title="Update available! Click to update"
+          class="relative flex h-7 items-center gap-1 px-2 rounded-lg text-xs font-medium transition cursor-pointer bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+          <svg class="h-3.5 w-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          @if (availableUpdate()) {
-          <span class="text-[11px] font-semibold text-emerald-300">v{{ availableUpdate()?.version }}</span>
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          } @else if (isCheckingUpdate()) {
-          <span class="text-[10px] text-white/60 hidden sm:inline">Checking...</span>
-          }
+          <span class="text-[11px] font-semibold text-emerald-300">Update</span>
         </button>
+        }
 
         <!-- CLEAR CONVERSATION -->
         @if (messages().length > 0) {
@@ -250,34 +208,23 @@
         [class]="isMaximized() ? 'max-w-5xl mx-auto w-full flex flex-col min-h-full' : 'w-full flex flex-col min-h-full'">
 
         @if (!authService.isAuthenticated()) {
-        <!-- ACCESS RESTRICTED / LOCK SCREEN -->
+        <!-- WELCOME & SIGN IN / SIGN UP SCREEN -->
         <div class="flex flex-col items-center justify-center my-auto py-10 text-center px-4">
-          <div class="relative flex items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/20 to-indigo-500/10 border border-purple-500/30 p-5 mb-5 shadow-2xl shadow-purple-950/50">
-            <svg class="h-10 w-10 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            <div class="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow">
-              <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
+          <!-- Aivora Glowing Orb -->
+          <div class="relative flex items-center justify-center rounded-3xl bg-purple-500/10 border border-purple-500/25 p-5 mb-5 shadow-2xl shadow-purple-950/40">
+            <div class="h-14 w-14 rounded-full bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)] border border-white/30 shadow-[0_0_20px_rgba(155,124,255,0.6)]"></div>
           </div>
 
-          <div class="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 border border-red-500/30 px-3 py-1 text-[11px] font-semibold text-red-300 mb-3.5">
-            <span class="h-1.5 w-1.5 rounded-full bg-red-400"></span>
-            <span>Authentication Required</span>
-          </div>
-
-          <h2 class="text-xl font-bold text-white tracking-tight">
-            Access Restricted
+          <h2 class="text-2xl font-bold text-white tracking-tight">
+            Welcome to Aivora
           </h2>
-          <p class="mt-2 text-xs text-white/60 max-w-[340px] leading-relaxed">
-            Aivora Assistant is locked. Only authenticated users with an authorized Google account can access AI reasoning, ask questions, or run queries.
+          <p class="mt-2 text-xs text-white/60 max-w-[360px] leading-relaxed">
+            Your personal desktop AI assistant. Sign in or create a free account to ask questions, explore ideas, and sync your conversations.
           </p>
 
-          <div class="mt-6 flex flex-col items-center gap-3 w-full max-w-[290px]">
+          <div class="mt-6 flex flex-col items-center gap-3 w-full max-w-[320px]">
             @if (authService.isWaitingForBrowserAuth()) {
-            <div class="w-full rounded-2xl bg-purple-500/10 border border-purple-500/30 p-3.5 text-center">
+            <div class="w-full rounded-2xl bg-purple-500/10 border border-purple-500/30 p-4 text-center">
               <div class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-purple-500/20 text-purple-300 mb-2 animate-pulse">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -285,10 +232,10 @@
               </div>
               <p class="text-xs font-semibold text-white">Browser Opened</p>
               <p class="mt-1 text-[11px] text-white/70 leading-relaxed">
-                Choose your Google account in your browser. Aivora will unlock automatically once completed.
+                Complete sign-in in your browser. Aivora will unlock automatically once completed.
               </p>
 
-              <!-- Quick redeemer if browser refused to connect -->
+              <!-- Quick code redeemer if browser refused to connect -->
               <div class="mt-2.5 p-2.5 rounded-xl bg-black/40 border border-white/10 text-left">
                 <p class="text-[10px] text-amber-300/90 font-medium mb-1">
                   Browser says "localhost refused to connect"?
@@ -317,27 +264,49 @@
               </div>
             </div>
             } @else {
-            <button id="lockscreen-signin-btn" type="button" (click)="loginWithGoogle()"
+            <!-- Primary Action Buttons: Sign In & Create Account -->
+            <div class="flex w-full gap-2.5">
+              <button id="lockscreen-signin-btn" type="button" (click)="openAuthModal('signin')"
+                class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 py-2.5 px-4 text-xs font-semibold text-white shadow-lg shadow-purple-950/50 transition cursor-pointer active:scale-[0.98]">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                <span>Sign In</span>
+              </button>
+
+              <button id="lockscreen-signup-btn" type="button" (click)="openAuthModal('signup')"
+                class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 py-2.5 px-4 text-xs font-semibold text-white transition cursor-pointer active:scale-[0.98]">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                <span>Create Account</span>
+              </button>
+            </div>
+
+            <!-- Divider -->
+            <div class="relative flex py-1 items-center w-full">
+              <div class="flex-grow border-t border-white/10"></div>
+              <span class="flex-shrink mx-3 text-[10px] text-white/40 uppercase tracking-wider">or</span>
+              <div class="flex-grow border-t border-white/10"></div>
+            </div>
+
+            <!-- Continue with Google Button -->
+            <button id="lockscreen-google-btn" type="button" (click)="loginWithGoogle()"
               [disabled]="authService.isLoading()"
-              class="w-full flex items-center justify-center gap-2.5 rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-slate-900 shadow-xl hover:bg-slate-100 active:scale-[0.98] transition cursor-pointer disabled:opacity-50">
+              class="w-full flex items-center justify-center gap-2.5 rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-slate-900 shadow hover:bg-slate-100 active:scale-[0.98] transition cursor-pointer disabled:opacity-50">
               <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
               </svg>
               @if (authService.isLoading()) {
-                <span>Connecting to Google OAuth...</span>
+                <span>Connecting to Google...</span>
               } @else {
-                <span>Sign in with Google</span>
+                <span>Continue with Google</span>
               }
             </button>
             }
-
-            <button type="button" (click)="openAuthModal()"
-              class="text-[11px] text-white/50 hover:text-white/80 transition cursor-pointer underline">
-              Manual / Dev Token Verification
-            </button>
           </div>
         </div>
         } @else {
@@ -495,25 +464,11 @@
     </div>
 
 
-    <!-- BOTTOM INPUT BAR -->
-
+    <!-- BOTTOM INPUT BAR (ONLY ACTIVE WHEN SIGNED IN) -->
+    @if (authService.isAuthenticated()) {
     <div id="aivora-input-bar" class="border-t border-white/10 bg-slate-950 shrink-0"
       [class]="isMaximized() ? 'p-4 md:px-12' : 'p-3.5 bg-slate-950/80'">
       <div [class]="isMaximized() ? 'max-w-5xl mx-auto w-full' : 'w-full'">
-        @if (!authService.isAuthenticated()) {
-        <div class="flex w-full items-center justify-between rounded-2xl border border-purple-500/20 bg-white/5 px-4 py-3 text-xs text-white/50">
-          <div class="flex items-center gap-2">
-            <svg class="h-4 w-4 text-purple-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            <span class="text-white/70 font-medium">Please sign in to send messages or use tools</span>
-          </div>
-          <button type="button" (click)="openAuthModal()"
-            class="rounded-xl bg-purple-600/80 hover:bg-purple-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow transition cursor-pointer">
-            Sign In
-          </button>
-        </div>
-        } @else {
         <form (submit)="$event.preventDefault(); sendMessage()"
           class="flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3.5 py-2.5 focus-within:border-white/30 focus-within:bg-white/[0.07] focus-within:shadow-none transition-colors">
 
@@ -545,10 +500,9 @@
           </button>
 
         </form>
-        }
 
         <div class="mt-1.5 flex items-center justify-between px-1 text-[10px] text-white/30">
-          <span>FastAPI Gemini RAG • Authenticated</span>
+          <span>Aivora AI Assistant • Ready</span>
           <div class="flex items-center gap-2">
             @if (isMaximized()) {
             <span>Press Maximize button again to restore compact mode</span>
@@ -559,6 +513,7 @@
         </div>
       </div>
     </div>
+    }
 
   </div>
   }
@@ -707,8 +662,20 @@
           </svg>
         </div>
         <div>
-          <h3 class="text-sm font-semibold text-white">Aivora User & Backend Manager</h3>
-          <p class="text-xs text-white/50">FastAPI • PostgreSQL • JWT Sessions</p>
+          <h3 class="text-sm font-semibold text-white">
+            @if (authService.isAuthenticated()) {
+              Account & Settings
+            } @else {
+              Aivora Account
+            }
+          </h3>
+          <p class="text-xs text-white/50">
+            @if (authService.isAuthenticated()) {
+              Manage profile, saved chats, and sign out
+            } @else {
+              Sign in or create an account
+            }
+          </p>
         </div>
       </div>
 
@@ -729,7 +696,7 @@
         <button type="button" (click)="setAuthMode('profile')"
           class="flex-1 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer text-center"
           [class]="authMode() === 'profile' ? 'bg-purple-600 text-white shadow' : 'text-white/60 hover:text-white'">
-          Profile & Data
+          Profile & Settings
         </button>
         <button type="button" (click)="setAuthMode('profile'); loadSavedConversations()"
           class="flex-1 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer text-center"
@@ -737,15 +704,10 @@
           Saved Chats ({{ savedConversations().length }})
         </button>
         }
-        <button type="button" (click)="setAuthMode('settings')"
-          class="flex-1 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer text-center"
-          [class]="authMode() === 'settings' ? 'bg-purple-600 text-white shadow' : 'text-white/60 hover:text-white'">
-          API Server
-        </button>
       </div>
 
       <!-- Scrollable Tab Content Container -->
-      <div class="overflow-y-auto pr-1 space-y-4 max-h-[60vh]">
+      <div class="overflow-y-auto no-scrollbar space-y-3.5 max-h-[78vh]">
 
         <!-- Global Alerts -->
         @if (authService.authError()) {
@@ -768,13 +730,13 @@
 
         <!-- TAB 1: MANUAL SIGN IN -->
         @if (authMode() === 'signin' && !authService.isAuthenticated()) {
-        <form (submit)="$event.preventDefault(); submitManualLogin()" class="space-y-3.5">
+        <form (submit)="$event.preventDefault(); submitManualLogin()" class="space-y-3">
           <div>
             <label class="block text-[11px] font-medium text-white/70 mb-1">Email Address</label>
             <div class="relative">
               <input type="email" [value]="loginEmail()" (input)="loginEmail.set($any($event.target).value)"
                 required placeholder="name@example.com"
-                class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
+                class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
             </div>
           </div>
 
@@ -788,7 +750,7 @@
             <div class="relative">
               <input [type]="showPassword() ? 'text' : 'password'" [value]="loginPassword()" (input)="loginPassword.set($any($event.target).value)"
                 required placeholder="Enter your password"
-                class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
+                class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
             </div>
           </div>
 
@@ -803,7 +765,7 @@
           </button>
 
           <!-- Divider -->
-          <div class="relative flex items-center justify-center my-3">
+          <div class="relative flex items-center justify-center my-2.5">
             <div class="w-full border-t border-white/10"></div>
             <span class="absolute bg-slate-900 px-2 text-[10px] text-white/40 uppercase tracking-wider">or continue with</span>
           </div>
@@ -820,7 +782,7 @@
             <span>Continue with Google</span>
           </button>
 
-          <p class="text-center text-xs text-white/50 pt-2">
+          <p class="text-center text-xs text-white/50 pt-1.5">
             Don't have an account?
             <button type="button" (click)="setAuthMode('signup')" class="text-purple-400 hover:underline font-semibold cursor-pointer">
               Create an account
@@ -831,19 +793,19 @@
 
         <!-- TAB 2: MANUAL SIGN UP -->
         @if (authMode() === 'signup' && !authService.isAuthenticated()) {
-        <form (submit)="$event.preventDefault(); submitManualRegister()" class="space-y-3.5">
+        <form (submit)="$event.preventDefault(); submitManualRegister()" class="space-y-2.5">
           <div>
             <label class="block text-[11px] font-medium text-white/70 mb-1">Full Name</label>
             <input type="text" [value]="signupFullName()" (input)="signupFullName.set($any($event.target).value)"
               placeholder="Your name"
-              class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
+              class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
           </div>
 
           <div>
             <label class="block text-[11px] font-medium text-white/70 mb-1">Email Address *</label>
             <input type="email" [value]="signupEmail()" (input)="signupEmail.set($any($event.target).value)"
               required placeholder="name@example.com"
-              class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
+              class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
           </div>
 
           <div>
@@ -855,14 +817,14 @@
             </div>
             <input [type]="showSignupPassword() ? 'text' : 'password'" [value]="signupPassword()" (input)="signupPassword.set($any($event.target).value)"
               required placeholder="Minimum 6 characters" minlength="6"
-              class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
+              class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
           </div>
 
           <div>
             <label class="block text-[11px] font-medium text-white/70 mb-1">Confirm Password *</label>
             <input [type]="showSignupPassword() ? 'text' : 'password'" [value]="signupConfirmPassword()" (input)="signupConfirmPassword.set($any($event.target).value)"
               required placeholder="Re-enter password" minlength="6"
-              class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
+              class="w-full rounded-xl bg-white/5 border border-white/10 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 transition" />
           </div>
 
           <button id="modal-manual-signup-btn" type="submit" [disabled]="authService.isLoading()"
@@ -903,10 +865,10 @@
               <p class="text-xs text-white/60 truncate">{{ authService.currentUser()?.email }}</p>
               <div class="mt-1 flex items-center gap-2">
                 <span class="rounded bg-emerald-500/20 border border-emerald-500/30 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-300">
-                  {{ authService.currentUser()?.google_id ? 'Google OAuth' : 'Email/Password Account' }}
+                  {{ authService.currentUser()?.google_id ? 'Google Account' : 'Email Account' }}
                 </span>
                 <span class="rounded bg-purple-500/20 border border-purple-500/30 px-1.5 py-0.5 text-[9px] font-semibold text-purple-300">
-                  PostgreSQL Sync
+                  Cloud Sync
                 </span>
               </div>
             </div>
@@ -935,19 +897,19 @@
             </div>
           </div>
 
-          <!-- Saved Conversations from PostgreSQL -->
+          <!-- Saved Conversations -->
           <div class="rounded-xl border border-white/10 bg-white/5 p-3.5 space-y-2">
             <div class="flex items-center justify-between">
-              <h5 class="text-xs font-semibold text-white">PostgreSQL Saved Chats</h5>
+              <h5 class="text-xs font-semibold text-white">Saved Conversations</h5>
               <button type="button" (click)="loadSavedConversations()" [disabled]="isLoadingConversations()"
                 class="text-[11px] text-purple-300 hover:underline cursor-pointer">
                 {{ isLoadingConversations() ? 'Loading...' : 'Refresh List' }}
               </button>
             </div>
             @if (savedConversations().length === 0) {
-              <p class="text-[11px] text-white/40 italic py-1">No saved chat sessions yet. Ask questions in Aivora to auto-save conversations.</p>
+              <p class="text-[11px] text-white/40 italic py-1">No saved conversations yet. Conversations are automatically backed up as you chat.</p>
             } @else {
-              <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+              <div class="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar pr-1">
                 @for (c of savedConversations(); track c.id) {
                   <div class="flex items-center justify-between rounded-lg bg-black/30 border border-white/5 px-2.5 py-1.5 text-[11px] text-white/80">
                     <span class="truncate max-w-[240px] font-medium">{{ c.title }}</span>
@@ -963,22 +925,6 @@
             }
           </div>
 
-          <!-- Protected API Test -->
-          <div class="rounded-xl border border-white/10 bg-white/5 p-3 text-xs space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="font-medium text-white/80">Test Authenticated Session:</span>
-              <button type="button" (click)="testProtectedEndpoint()" [disabled]="isTestingApi()"
-                class="px-2.5 py-1 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-[11px] font-medium text-white transition disabled:opacity-50 cursor-pointer">
-                {{ isTestingApi() ? 'Testing...' : 'Call GET /api/v1/auth/me' }}
-              </button>
-            </div>
-            @if (testApiResult()) {
-              <p class="text-[11px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 font-mono break-all">
-                {{ testApiResult() }}
-              </p>
-            }
-          </div>
-
           <!-- Sign Out Button -->
           <div class="flex justify-between items-center pt-2">
             <button id="modal-signout-btn" type="button" (click)="logout()"
@@ -988,62 +934,6 @@
             <button type="button" (click)="closeAuthModal()"
               class="px-4 py-2 rounded-xl text-xs font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/15 transition cursor-pointer">
               Done
-            </button>
-          </div>
-        </div>
-        }
-
-        <!-- TAB 4: API SERVER CONFIGURATION -->
-        @if (authMode() === 'settings') {
-        <div class="space-y-4">
-          <div class="rounded-xl bg-purple-500/10 border border-purple-500/20 p-3.5 space-y-2">
-            <div class="flex items-center gap-2 text-xs font-semibold text-purple-200">
-              <svg class="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span>Centralized Backend API Configuration</span>
-            </div>
-            <p class="text-[11px] text-white/70 leading-relaxed">
-              No API URLs are hardcoded in the application. All authentication, PostgreSQL operations, and Gemini AI queries are managed exclusively through this backend URL.
-            </p>
-          </div>
-
-          <!-- Current URL Status -->
-          <div class="rounded-xl border border-white/10 bg-white/5 p-3.5 space-y-3">
-            <div>
-              <label class="block text-[11px] font-medium text-white/70 mb-1">
-                FastAPI Backend URL:
-              </label>
-              <input type="text" [value]="apiUrlInput()" (input)="apiUrlInput.set($any($event.target).value)"
-                placeholder="Leave empty for relative /api/v1 (or enter e.g. http://localhost:8000)"
-                class="w-full rounded-xl bg-black/30 border border-white/10 px-3.5 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500 font-mono transition" />
-              <p class="mt-1.5 text-[10px] text-white/50">
-                Effective base target: <code class="text-purple-300 font-mono">{{ configService.getFullUrl('/api/v1') }}</code>
-              </p>
-            </div>
-
-            <div class="flex gap-2">
-              <button type="button" (click)="saveApiUrl()"
-                class="flex-1 rounded-xl bg-purple-600 hover:bg-purple-500 px-3 py-2 text-xs font-semibold text-white transition cursor-pointer">
-                Save & Apply URL
-              </button>
-              <button type="button" (click)="resetApiUrl()"
-                class="rounded-xl bg-white/10 hover:bg-white/15 px-3 py-2 text-xs font-medium text-white/80 hover:text-white transition cursor-pointer">
-                Reset
-              </button>
-            </div>
-          </div>
-
-          <!-- Backend Health Check -->
-          <div class="flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs border"
-            [class]="authService.backendHealthy() ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-amber-500/10 border-amber-500/20 text-amber-300'">
-            <div class="flex items-center gap-2">
-              <span class="h-2 w-2 rounded-full" [class]="authService.backendHealthy() ? 'bg-emerald-400' : 'bg-amber-400'"></span>
-              <span>Status: {{ authService.backendHealthy() ? 'FastAPI Backend Online' : 'FastAPI Backend Offline' }}</span>
-            </div>
-            <button type="button" (click)="authService.checkBackendHealth()" class="underline hover:opacity-80 text-xs font-medium cursor-pointer">
-              Test Connection
             </button>
           </div>
         </div>

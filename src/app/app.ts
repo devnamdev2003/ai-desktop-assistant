@@ -118,11 +118,11 @@ export class App {
   showUpdateModal = signal(false);
   private tauriUpdateHandle: Update | null = null;
 
-  // Authentication, User Management & Dynamic Backend Config State
+  // Authentication & User State
   authService = inject(AuthService);
   configService = inject(ConfigService);
   showAuthModal = signal(false);
-  authMode = signal<'signin' | 'signup' | 'profile' | 'settings'>('signin');
+  authMode = signal<'signin' | 'signup' | 'profile'>('signin');
 
   // Manual Login Form
   loginEmail = signal('');
@@ -327,14 +327,13 @@ export class App {
     this.showUpdateModal.set(false);
   }
 
-  openAuthModal(): void {
+  openAuthModal(initialMode?: 'signin' | 'signup' | 'profile'): void {
     this.showAuthModal.set(true);
     this.testApiResult.set(null);
-    this.authService.checkBackendHealth();
     if (this.authService.isAuthenticated()) {
       this.setAuthMode('profile');
     } else {
-      this.setAuthMode('signin');
+      this.setAuthMode(initialMode || 'signin');
     }
   }
 
@@ -343,7 +342,7 @@ export class App {
     this.testApiResult.set(null);
   }
 
-  setAuthMode(mode: 'signin' | 'signup' | 'profile' | 'settings'): void {
+  setAuthMode(mode: 'signin' | 'signup' | 'profile'): void {
     this.authMode.set(mode);
     this.authService.authError.set(null);
     this.authService.authSuccessMessage.set(null);
@@ -352,8 +351,6 @@ export class App {
       this.profileFullNameInput.set(user.full_name || '');
       this.profileAvatarUrlInput.set(user.avatar_url || '');
       this.loadSavedConversations();
-    } else if (mode === 'settings') {
-      this.apiUrlInput.set(this.configService.apiUrl());
     }
   }
 
@@ -900,7 +897,7 @@ export class App {
     }
 
     if (!res) {
-      throw new Error('FastAPI backend is offline. Please start the backend on port 8000 to access Aivora.');
+      throw new Error('Unable to reach the assistant service. Please check your network connection and try again.');
     }
 
     if (res.status === 401) {
@@ -910,12 +907,12 @@ export class App {
         return this.queryAi(question);
       }
       this.openAuthModal();
-      throw new Error('Your authentication session has expired. Please sign in again.');
+      throw new Error('Your session has expired. Please sign in again.');
     }
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.detail || `Backend error: status ${res.status}`);
+      throw new Error(errData.detail || 'Could not complete the request. Please try again.');
     }
 
     const data = (await res.json()) as ApiResponse;
@@ -923,7 +920,7 @@ export class App {
       return data.answer;
     }
 
-    throw new Error('No valid answer returned by backend');
+    throw new Error('No response was generated. Please try asking again.');
   }
 
   formatAnswer(text: string): SafeHtml {

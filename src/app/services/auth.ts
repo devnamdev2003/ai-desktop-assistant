@@ -362,12 +362,12 @@ export class AuthService {
       const res = await fetch(endpoint);
 
       if (!res.ok) {
-        throw new Error('FastAPI backend is offline. Please start the backend.');
+        throw new Error('Unable to connect to the authentication service. Please try again.');
       }
 
       const data = await res.json();
       if (!data.url) {
-        throw new Error('No Google OAuth URL returned by backend.');
+        throw new Error('Could not start Google sign in. Please try again.');
       }
 
       this.browserAuthUrl.set(data.url);
