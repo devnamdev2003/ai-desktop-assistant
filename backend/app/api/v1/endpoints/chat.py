@@ -53,7 +53,9 @@ async def stream_gemini_response(prompt: str, history: Optional[List[dict]] = No
             temperature=0.7,
             max_output_tokens=2048,
         )
-
+        print("="*40)
+        print(contents)
+        print("="*40)
         response_stream = await client.aio.models.generate_content_stream(
             model="gemini-3.5-flash-lite",
             contents=contents,
