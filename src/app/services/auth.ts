@@ -1,4 +1,5 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { ConfigService } from './config';
 
 export interface UserProfile {
   id: string;
@@ -20,10 +21,20 @@ export interface TokenResponse {
   user: UserProfile;
 }
 
+export interface SavedConversation {
+  id: number;
+  user_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
+  private readonly configService = inject(ConfigService);
+
   private readonly ACCESS_TOKEN_KEY = 'aivora_access_token';
   private readonly REFRESH_TOKEN_KEY = 'aivora_refresh_token';
   private readonly USER_KEY = 'aivora_user';
@@ -54,7 +65,6 @@ export class AuthService {
   private async initDeepLinkListener(): Promise<void> {
     if (typeof window === 'undefined') return;
 
-    // Check if running inside Tauri
     const isTauri = !!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__;
     if (!isTauri) return;
 
@@ -76,7 +86,6 @@ export class AuthService {
   handleDeepLinkUrl(rawUrl: string): void {
     if (!rawUrl) return;
     try {
-      // Normalizes aivora://auth/callback?... into a parseable URL
       const normalized = rawUrl.replace(/^aivora:\/\//, 'http://aivora/');
       const parsed = new URL(normalized);
       const accessToken = parsed.searchParams.get('access_token');
@@ -128,9 +137,7 @@ export class AuthService {
     }
 
     if (this.accessToken) {
-      // Validate session with backend in background
       this.fetchCurrentUser().catch(() => {
-        // Attempt refresh
         this.refreshSession();
       });
     }
@@ -150,7 +157,6 @@ export class AuthService {
 
       if (accessToken) {
         this.saveTokens(accessToken, refreshToken || '');
-        // Clean URL hash
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
         this.fetchCurrentUser();
       }
@@ -161,43 +167,150 @@ export class AuthService {
    * Pings the FastAPI health endpoint to verify backend connectivity.
    */
   async checkBackendHealth(): Promise<boolean> {
+    const url = this.configService.getFullUrl('/api/v1/health');
     try {
-      const res = await fetch('https://ai-desktop-api.vercel.app/api/v1/health');
+      const res = await fetch(url);
       if (res.ok) {
         this.backendHealthy.set(true);
         return true;
       }
     } catch {
-      // Fallback direct port check if proxy not used
-      try {
-        const directRes = await fetch('https://ai-desktop-api.vercel.app/api/v1/health');
-        if (directRes.ok) {
-          this.backendHealthy.set(true);
-          return true;
-        }
-      } catch {
-        // Backend not currently running
-      }
+      // Offline
     }
     this.backendHealthy.set(false);
     return false;
   }
 
   /**
-   * Opens a URL in the system's default web browser (Chrome/Firefox/Edge/Safari).
-   * Works with Tauri's official opener plugin, with resilient browser fallbacks.
+   * Manual User Registration with Email and Password.
+   * Auto-hashes password and creates account in the database.
+   */
+  async register(email: string, password: string, fullName?: string): Promise<boolean> {
+    this.isLoading.set(true);
+    this.authError.set(null);
+    this.authSuccessMessage.set(null);
+
+    const endpoint = this.configService.getFullUrl('/api/v1/auth/register');
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+          full_name: fullName?.trim() || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Registration failed. Please check your details.');
+      }
+
+      const tokenData: TokenResponse = await res.json();
+      this.handleAuthSuccess(tokenData);
+      this.authSuccessMessage.set(`Welcome to Aivora, ${tokenData.user.full_name || tokenData.user.email}!`);
+      return true;
+    } catch (err: any) {
+      this.authError.set(err.message || 'Registration failed');
+      return false;
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Manual User Login with Email and Password.
+   */
+  async login(email: string, password: string): Promise<boolean> {
+    this.isLoading.set(true);
+    this.authError.set(null);
+    this.authSuccessMessage.set(null);
+
+    const endpoint = this.configService.getFullUrl('/api/v1/auth/login');
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Invalid email or password.');
+      }
+
+      const tokenData: TokenResponse = await res.json();
+      this.handleAuthSuccess(tokenData);
+      this.authSuccessMessage.set('Signed in successfully!');
+      return true;
+    } catch (err: any) {
+      this.authError.set(err.message || 'Login failed');
+      return false;
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Updates the authenticated user's profile on the FastAPI backend.
+   */
+  async updateProfile(fullName?: string, avatarUrl?: string): Promise<UserProfile | null> {
+    const token = this.accessToken;
+    if (!token) return null;
+
+    this.isLoading.set(true);
+    this.authError.set(null);
+    const endpoint = this.configService.getFullUrl('/api/v1/users/me');
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          full_name: fullName !== undefined ? fullName : undefined,
+          avatar_url: avatarUrl !== undefined ? avatarUrl : undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Failed to update profile.');
+      }
+
+      const updatedUser: UserProfile = await res.json();
+      this.currentUser.set(updatedUser);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(this.USER_KEY, JSON.stringify(updatedUser));
+      }
+      this.authSuccessMessage.set('Profile updated successfully!');
+      return updatedUser;
+    } catch (err: any) {
+      this.authError.set(err.message || 'Profile update failed');
+      return null;
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Opens a URL in the system's default web browser.
    */
   async openUrlInExternalBrowser(url: string): Promise<boolean> {
-    // 1. Try Tauri v2 plugin opener
     try {
       const { openUrl } = await import('@tauri-apps/plugin-opener');
       await openUrl(url);
       return true;
     } catch {
-      // Plugin opener not present or not running in Tauri
+      // Ignored
     }
 
-    // 2. Try window.__TAURI__ opener API if present
     try {
       const tauriGlobal = (window as unknown as { __TAURI__?: { opener?: { openUrl?: (u: string) => Promise<void> } } }).__TAURI__;
       if (tauriGlobal?.opener?.openUrl) {
@@ -205,10 +318,9 @@ export class AuthService {
         return true;
       }
     } catch {
-      // Continue to browser fallback
+      // Ignored
     }
 
-    // 3. Fallback: window.open in new tab/window
     try {
       const newWin = window.open(url, '_blank', 'noopener,noreferrer');
       if (newWin) {
@@ -216,10 +328,9 @@ export class AuthService {
         return true;
       }
     } catch {
-      // Continue to link click fallback
+      // Ignored
     }
 
-    // 4. Anchor element click fallback
     if (typeof document !== 'undefined') {
       try {
         const a = document.createElement('a');
@@ -239,8 +350,7 @@ export class AuthService {
   }
 
   /**
-   * Initiates Google OAuth flow by fetching the Google Auth URL with account chooser
-   * and redirecting to the user's external default web browser.
+   * Initiates Google OAuth flow by fetching the authorization URL.
    */
   async startGoogleLogin(): Promise<void> {
     this.isLoading.set(true);
@@ -248,16 +358,11 @@ export class AuthService {
     this.cancelBrowserAuth();
 
     try {
-      let endpoint = 'https://ai-desktop-api.vercel.app/api/v1/auth/google/url?is_desktop=true';
-      let res = await fetch(endpoint).catch(() => null);
-
-      if (!res || !res.ok) {
-        // Try direct backend port 8000
-        res = await fetch('https://ai-desktop-api.vercel.app/api/v1/auth/google/url?is_desktop=true');
-      }
+      const endpoint = this.configService.getFullUrl('/api/v1/auth/google/url?is_desktop=true');
+      const res = await fetch(endpoint);
 
       if (!res.ok) {
-        throw new Error('FastAPI backend is offline. Please start the backend on port 8000.');
+        throw new Error('FastAPI backend is offline. Please start the backend.');
       }
 
       const data = await res.json();
@@ -271,10 +376,8 @@ export class AuthService {
       this.isWaitingForBrowserAuth.set(true);
       this.isLoading.set(false);
 
-      // Open the Google login page directly in the user's default browser
       await this.openUrlInExternalBrowser(data.url);
 
-      // Poll session status in the background
       if (sessionId) {
         this.startSessionPolling(sessionId);
       }
@@ -285,9 +388,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Re-opens the browser authorization link if the user closed the tab or missed the popup.
-   */
   async reopenBrowserAuth(): Promise<void> {
     const url = this.browserAuthUrl();
     if (url) {
@@ -295,9 +395,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Cancels the active browser authentication wait loop.
-   */
   cancelBrowserAuth(): void {
     if (this.sessionPollTimer) {
       clearInterval(this.sessionPollTimer);
@@ -308,16 +405,13 @@ export class AuthService {
     this.browserAuthUrl.set(null);
   }
 
-  /**
-   * Repeatedly checks whether the user has completed Google authorization in their browser.
-   */
   private startSessionPolling(sessionId: string): void {
     if (this.sessionPollTimer) {
       clearInterval(this.sessionPollTimer);
     }
 
     let attempts = 0;
-    const maxAttempts = 250; // ~5 minutes of polling at 1.2s intervals
+    const maxAttempts = 250;
 
     this.sessionPollTimer = setInterval(async () => {
       attempts++;
@@ -328,17 +422,14 @@ export class AuthService {
       }
 
       try {
-        let endpoint = `https://ai-desktop-api.vercel.app/api/v1/auth/google/check-desktop-session?session_id=${encodeURIComponent(sessionId)}`;
-        let res = await fetch(endpoint).catch(() => null);
-
-        if (!res || !res.ok) {
-          res = await fetch(`{endpoint}`).catch(() => null);
-        }
+        const endpoint = this.configService.getFullUrl(
+          `/api/v1/auth/google/check-desktop-session?session_id=${encodeURIComponent(sessionId)}`
+        );
+        const res = await fetch(endpoint).catch(() => null);
 
         if (res && res.ok) {
           const data = await res.json();
           if (data.status === 'authenticated' && data.tokens) {
-            // Authentication successful!
             this.cancelBrowserAuth();
             this.handleAuthSuccess(data.tokens);
           } else if (data.status === 'expired') {
@@ -352,11 +443,6 @@ export class AuthService {
     }, 1200);
   }
 
-  /**
-   * Exchanges an OAuth authorization code or full redirected browser URL
-   * (e.g. http://localhost:8000/api/v1/auth/google/callback?code=4/0Ab... or pure code)
-   * directly with the backend and completes desktop login.
-   */
   async exchangeGoogleCode(input: string): Promise<boolean> {
     if (!input || !input.trim()) return false;
     this.isLoading.set(true);
@@ -364,7 +450,6 @@ export class AuthService {
 
     try {
       let code = input.trim();
-      // If user pasted full callback URL
       if (code.includes('code=')) {
         try {
           const u = new URL(code.startsWith('http') ? code : `http://${code}`);
@@ -378,13 +463,11 @@ export class AuthService {
         }
       }
 
-      const res = await fetch('https://ai-desktop-api.vercel.app/api/v1/auth/google/verify', {
+      const endpoint = this.configService.getFullUrl('/api/v1/auth/google/verify');
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code,
-          redirect_uri: 'https://ai-desktop-api.vercel.app/api/v1/auth/google/callback',
-        }),
+        body: JSON.stringify({ code }),
       });
 
       if (!res.ok) {
@@ -405,15 +488,13 @@ export class AuthService {
     }
   }
 
-  /**
-   * Validates an ID token directly with the FastAPI backend.
-   */
   async verifyGoogleIdToken(idToken: string): Promise<boolean> {
     this.isLoading.set(true);
     this.authError.set(null);
 
     try {
-      const res = await fetch('https://ai-desktop-api.vercel.app/api/v1/auth/google/verify', {
+      const endpoint = this.configService.getFullUrl('/api/v1/auth/google/verify');
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id_token: idToken }),
@@ -435,9 +516,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Refreshes access token using the stored refresh token.
-   */
   async refreshSession(): Promise<boolean> {
     const refreshToken = this.refreshTokenValue;
     if (!refreshToken) {
@@ -446,7 +524,8 @@ export class AuthService {
     }
 
     try {
-      const res = await fetch('https://ai-desktop-api.vercel.app/api/v1/auth/refresh', {
+      const endpoint = this.configService.getFullUrl('/api/v1/auth/refresh');
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: refreshToken }),
@@ -466,15 +545,13 @@ export class AuthService {
     }
   }
 
-  /**
-   * Fetches latest user profile from protected endpoint /api/v1/auth/me.
-   */
   async fetchCurrentUser(): Promise<UserProfile | null> {
     const token = this.accessToken;
     if (!token) return null;
 
     try {
-      const res = await fetch('https://ai-desktop-api.vercel.app/api/v1/auth/me', {
+      const endpoint = this.configService.getFullUrl('/api/v1/auth/me');
+      const res = await fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -489,7 +566,9 @@ export class AuthService {
 
       const user: UserProfile = await res.json();
       this.currentUser.set(user);
-      localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+      }
       return user;
     } catch {
       return null;
@@ -497,12 +576,50 @@ export class AuthService {
   }
 
   /**
-   * Revokes session on backend and clears local tokens.
+   * Fetches user's saved conversations from FastAPI backend.
    */
+  async getSavedConversations(): Promise<SavedConversation[]> {
+    const token = this.accessToken;
+    if (!token) return [];
+
+    try {
+      const endpoint = this.configService.getFullUrl('/api/v1/chat/conversations');
+      const res = await fetch(endpoint, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Ignored
+    }
+    return [];
+  }
+
+  /**
+   * Deletes a conversation on the FastAPI backend.
+   */
+  async deleteConversation(conversationId: number | string): Promise<boolean> {
+    const token = this.accessToken;
+    if (!token) return false;
+
+    try {
+      const endpoint = this.configService.getFullUrl(`/api/v1/chat/conversations/${conversationId}`);
+      const res = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
   async logout(): Promise<void> {
     const refreshToken = this.refreshTokenValue;
     if (refreshToken) {
-      fetch('https://ai-desktop-api.vercel.app/api/v1/auth/logout', {
+      const endpoint = this.configService.getFullUrl('/api/v1/auth/logout');
+      fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: refreshToken }),

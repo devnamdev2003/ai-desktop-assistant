@@ -13,6 +13,17 @@ class UserCreate(UserBase):
     google_id: Optional[str] = None
 
 
+class UserRegister(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: Optional[str] = None
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None

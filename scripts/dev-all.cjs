@@ -1,8 +1,10 @@
 const { spawn } = require('child_process');
 const path = require('path');
 
-console.log('\x1b[36m%s\x1b[0m', '⚡ [Aivora] Starting Backend & Database Bridge on port 8000...');
-const backendProc = spawn(process.execPath, [path.join(__dirname, 'oauth-server.cjs')], {
+console.log('\x1b[36m%s\x1b[0m', '⚡ [Aivora] Starting FastAPI Python Backend on port 8000...');
+const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+const backendRunPath = path.join(__dirname, '..', 'backend', 'run.py');
+const backendProc = spawn(pythonCmd, [backendRunPath], {
   stdio: 'inherit',
   shell: true,
   env: process.env,

@@ -4,7 +4,8 @@ import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow, LogicalSize, Window } from '@tauri-apps/api/window';
 import { marked } from 'marked';
 import { check, Update } from '@tauri-apps/plugin-updater';
-import { AuthService, UserProfile } from './services/auth';
+import { AuthService, SavedConversation, UserProfile } from './services/auth';
+import { ConfigService } from './services/config';
 
 export interface UpdateInfo {
   version: string;
@@ -117,9 +118,36 @@ export class App {
   showUpdateModal = signal(false);
   private tauriUpdateHandle: Update | null = null;
 
-  // Authentication & Backend State
+  // Authentication, User Management & Dynamic Backend Config State
   authService = inject(AuthService);
+  configService = inject(ConfigService);
   showAuthModal = signal(false);
+  authMode = signal<'signin' | 'signup' | 'profile' | 'settings'>('signin');
+
+  // Manual Login Form
+  loginEmail = signal('');
+  loginPassword = signal('');
+  showPassword = signal(false);
+
+  // Manual Signup Form
+  signupFullName = signal('');
+  signupEmail = signal('');
+  signupPassword = signal('');
+  signupConfirmPassword = signal('');
+  showSignupPassword = signal(false);
+
+  // Profile Management Form
+  profileFullNameInput = signal('');
+  profileAvatarUrlInput = signal('');
+  isUpdatingProfile = signal(false);
+
+  // API Configuration Input
+  apiUrlInput = signal('');
+
+  // User Saved Conversations & History
+  savedConversations = signal<SavedConversation[]>([]);
+  isLoadingConversations = signal(false);
+
   testApiResult = signal<string | null>(null);
   isTestingApi = signal(false);
   manualTokenInput = signal('');
@@ -303,11 +331,133 @@ export class App {
     this.showAuthModal.set(true);
     this.testApiResult.set(null);
     this.authService.checkBackendHealth();
+    if (this.authService.isAuthenticated()) {
+      this.setAuthMode('profile');
+    } else {
+      this.setAuthMode('signin');
+    }
   }
 
   closeAuthModal(): void {
     this.showAuthModal.set(false);
     this.testApiResult.set(null);
+  }
+
+  setAuthMode(mode: 'signin' | 'signup' | 'profile' | 'settings'): void {
+    this.authMode.set(mode);
+    this.authService.authError.set(null);
+    this.authService.authSuccessMessage.set(null);
+    if (mode === 'profile' && this.authService.currentUser()) {
+      const user = this.authService.currentUser()!;
+      this.profileFullNameInput.set(user.full_name || '');
+      this.profileAvatarUrlInput.set(user.avatar_url || '');
+      this.loadSavedConversations();
+    } else if (mode === 'settings') {
+      this.apiUrlInput.set(this.configService.apiUrl());
+    }
+  }
+
+  toggleShowPassword(): void {
+    this.showPassword.update((v) => !v);
+  }
+
+  toggleShowSignupPassword(): void {
+    this.showSignupPassword.update((v) => !v);
+  }
+
+  async submitManualLogin(): Promise<void> {
+    const email = this.loginEmail().trim();
+    const password = this.loginPassword();
+
+    if (!email) {
+      this.authService.authError.set('Please enter your email address.');
+      return;
+    }
+    if (!password) {
+      this.authService.authError.set('Please enter your password.');
+      return;
+    }
+
+    const success = await this.authService.login(email, password);
+    if (success) {
+      this.loginPassword.set('');
+      this.closeAuthModal();
+    }
+  }
+
+  async submitManualRegister(): Promise<void> {
+    const fullName = this.signupFullName().trim();
+    const email = this.signupEmail().trim();
+    const password = this.signupPassword();
+    const confirm = this.signupConfirmPassword();
+
+    if (!email || !email.includes('@')) {
+      this.authService.authError.set('Please enter a valid email address.');
+      return;
+    }
+    if (!password || password.length < 6) {
+      this.authService.authError.set('Password must be at least 6 characters long.');
+      return;
+    }
+    if (password !== confirm) {
+      this.authService.authError.set('Passwords do not match. Please re-enter.');
+      return;
+    }
+
+    const success = await this.authService.register(email, password, fullName);
+    if (success) {
+      this.signupPassword.set('');
+      this.signupConfirmPassword.set('');
+      this.closeAuthModal();
+    }
+  }
+
+  async saveProfile(): Promise<void> {
+    this.isUpdatingProfile.set(true);
+    try {
+      await this.authService.updateProfile(
+        this.profileFullNameInput().trim(),
+        this.profileAvatarUrlInput().trim()
+      );
+    } finally {
+      this.isUpdatingProfile.set(false);
+    }
+  }
+
+  async loadSavedConversations(): Promise<void> {
+    this.isLoadingConversations.set(true);
+    try {
+      const convs = await this.authService.getSavedConversations();
+      this.savedConversations.set(convs);
+    } finally {
+      this.isLoadingConversations.set(false);
+    }
+  }
+
+  async deleteSavedConversation(id: number | string, event?: Event): Promise<void> {
+    if (event) {
+      event.stopPropagation();
+    }
+    const ok = await this.authService.deleteConversation(id);
+    if (ok) {
+      this.savedConversations.update((list) => list.filter((c) => c.id !== id));
+    }
+  }
+
+  saveApiUrl(): void {
+    const url = this.apiUrlInput().trim();
+    this.configService.setApiUrl(url);
+    this.authService.authSuccessMessage.set(
+      url ? `API Base URL updated to: ${url}` : 'API Base URL reset to relative proxy.'
+    );
+    this.authService.checkBackendHealth();
+  }
+
+  resetApiUrl(): void {
+    this.configService.resetApiUrl();
+    this.apiUrlInput.set('');
+    this.authService.authSuccessMessage.set('API Base URL reset to default proxy.');
+    this.authService.checkBackendHealth();
   }
 
   loginWithGoogle(): void {
@@ -737,24 +887,16 @@ export class App {
     };
 
     // Query authenticated FastAPI backend endpoint exclusively
+    const endpoint = this.configService.getFullUrl('/api/v1/chat');
     let res: Response | null = null;
     try {
-      res = await fetch('https://ai-desktop-api.vercel.app/api/v1/chat', {
+      res = await fetch(endpoint, {
         method: 'POST',
         headers: authHeaders,
         body: payload,
       });
     } catch {
-      // Direct backend port check if dev server proxy not running
-      try {
-        res = await fetch('https://ai-desktop-api.vercel.app/api/v1/chat', {
-          method: 'POST',
-          headers: authHeaders,
-          body: payload,
-        });
-      } catch {
-        res = null;
-      }
+      res = null;
     }
 
     if (!res) {

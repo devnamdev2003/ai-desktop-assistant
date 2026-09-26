@@ -12,12 +12,14 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    get_password_hash,
     hash_token,
+    verify_password,
 )
 from app.models.session import RefreshToken
 from app.models.user import User
 from app.schemas.token import RefreshTokenRequest, TokenResponse
-from app.schemas.user import GoogleAuthRequest, UserRead
+from app.schemas.user import GoogleAuthRequest, UserLogin, UserRead, UserRegister
 
 router = APIRouter()
 
@@ -50,6 +52,84 @@ def _issue_tokens_for_user(user: User, db: Session) -> TokenResponse:
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         user=UserRead.model_validate(user),
     )
+
+
+@router.post("/register", response_model=TokenResponse, summary="Manual User Registration (Email & Password)")
+@router.post("/signup", response_model=TokenResponse, summary="Manual User Registration (Email & Password) - Alias")
+def register_user(
+    reg_data: UserRegister,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
+    """Creates a new user account with email and password, hashing the password and auto-issuing tokens."""
+    email_clean = reg_data.email.strip().lower()
+    if not email_clean or len(reg_data.password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 6 characters long.",
+        )
+
+    existing_user = db.query(User).filter(User.email == email_clean).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email address already exists. Please sign in instead.",
+        )
+
+    # Hash password securely
+    hashed_pwd = get_password_hash(reg_data.password)
+    full_name_clean = reg_data.full_name.strip() if reg_data.full_name else email_clean.split("@")[0]
+
+    # Generate bot avatar url
+    avatar_url = f"https://api.dicebear.com/7.x/bottts/svg?seed={urllib.parse.quote(email_clean)}"
+
+    new_user = User(
+        email=email_clean,
+        full_name=full_name_clean,
+        avatar_url=avatar_url,
+        hashed_password=hashed_pwd,
+        is_active=True,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return _issue_tokens_for_user(new_user, db)
+
+
+@router.post("/login", response_model=TokenResponse, summary="Manual User Login (Email & Password)")
+def login_user(
+    login_data: UserLogin,
+    db: Session = Depends(get_db),
+) -> TokenResponse:
+    """Authenticates a user with email and password, returning JWT access & refresh tokens."""
+    email_clean = login_data.email.strip().lower()
+    user = db.query(User).filter(User.email == email_clean).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password.",
+        )
+
+    if not user.hashed_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This account was registered using Google Sign-In. Please sign in with Google.",
+        )
+
+    if not verify_password(login_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password.",
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account is deactivated. Please contact support.",
+        )
+
+    return _issue_tokens_for_user(user, db)
 
 
 @router.get("/google/url", summary="Get Google OAuth Authorization URL")
