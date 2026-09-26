@@ -132,8 +132,8 @@ async def send_chat_message(
             history_messages = [{"sender": r.sender, "text": r.text} for r in prev_records]
 
     # Generate response directly with Google Gemini
-    # answer = await generate_gemini_response(chat_req.question, history=history_messages)
-    answer = "dev namdev"
+    answer = await generate_gemini_response(chat_req.question, history=history_messages)
+    # answer = "Hi"
     # Persist conversation and messages in PostgreSQL
     if current_user:
         if conv_id:
