@@ -201,6 +201,11 @@ export class App {
    * If manual is true, user-facing notifications/modals will be shown.
    */
   async checkForUpdates(manual: boolean = false): Promise<void> {
+    if (manual && this.availableUpdate()) {
+      this.showUpdateModal.set(true);
+      return;
+    }
+
     this.isCheckingUpdate.set(true);
     this.updateStatusMessage.set(null);
 
