@@ -616,6 +616,7 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
+    this.cancelBrowserAuth();
     const refreshToken = this.refreshTokenValue;
     if (refreshToken) {
       const endpoint = this.configService.getFullUrl('/api/v1/auth/logout');
@@ -633,6 +634,8 @@ export class AuthService {
     }
     this.currentUser.set(null);
     this.authError.set(null);
+    this.authSuccessMessage.set(null);
+    this.isLoading.set(false);
   }
 
   private handleAuthSuccess(tokenData: TokenResponse): void {

@@ -343,10 +343,14 @@ export class App {
   }
 
   setAuthMode(mode: 'signin' | 'signup' | 'profile'): void {
-    this.authMode.set(mode);
+    if (!this.authService.isAuthenticated() && mode === 'profile') {
+      this.authMode.set('signin');
+    } else {
+      this.authMode.set(mode);
+    }
     this.authService.authError.set(null);
     this.authService.authSuccessMessage.set(null);
-    if (mode === 'profile' && this.authService.currentUser()) {
+    if (this.authMode() === 'profile' && this.authService.currentUser()) {
       const user = this.authService.currentUser()!;
       this.profileFullNameInput.set(user.full_name || '');
       this.profileAvatarUrlInput.set(user.avatar_url || '');
@@ -461,9 +465,30 @@ export class App {
     this.authService.startGoogleLogin();
   }
 
-  logout(): void {
+  logout(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
     this.authService.logout();
+    this.showAuthModal.set(false);
+    this.setAuthMode('signin');
     this.testApiResult.set(null);
+    this.messages.set([]);
+    this.inputText.set('');
+    this.loginEmail.set('');
+    this.loginPassword.set('');
+    this.showPassword.set(false);
+    this.signupFullName.set('');
+    this.signupEmail.set('');
+    this.signupPassword.set('');
+    this.signupConfirmPassword.set('');
+    this.showSignupPassword.set(false);
+    this.profileFullNameInput.set('');
+    this.profileAvatarUrlInput.set('');
+    this.savedConversations.set([]);
+    this.manualTokenInput.set('');
+    this.manualCodeOrUrlInput.set('');
   }
 
   async testProtectedEndpoint(): Promise<void> {
