@@ -9,6 +9,18 @@ from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt", "pbkdf2_sha256"], deprecated="auto")
 
+# Ephemeral secure secret used if JWT_SECRET_KEY is not defined in .env
+# This prevents forging tokens with an empty string "" key.
+_RUNTIME_DEV_SECRET = os.urandom(32).hex()
+
+
+def get_jwt_secret() -> str:
+    """Returns configured JWT_SECRET_KEY or secure runtime fallback."""
+    secret = (settings.JWT_SECRET_KEY or "").strip()
+    if secret:
+        return secret
+    return _RUNTIME_DEV_SECRET
+
 
 def create_access_token(
     subject: Union[str, Any],
@@ -31,7 +43,7 @@ def create_access_token(
     if extra_claims:
         to_encode.update(extra_claims)
 
-    return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return jwt.encode(to_encode, get_jwt_secret(), algorithm=settings.JWT_ALGORITHM)
 
 
 def create_refresh_token(
@@ -51,13 +63,13 @@ def create_refresh_token(
         "iat": now,
         "type": "refresh",
     }
-    return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return jwt.encode(to_encode, get_jwt_secret(), algorithm=settings.JWT_ALGORITHM)
 
 
 def decode_token(token: str) -> Dict[str, Any]:
     """Decodes and validates a JWT token using secret key and configured algorithm."""
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(token, get_jwt_secret(), algorithms=[settings.JWT_ALGORITHM])
         return payload
     except JWTError as exc:
         raise ValueError(f"Invalid or expired token: {str(exc)}") from exc

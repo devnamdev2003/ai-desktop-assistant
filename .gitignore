@@ -43,11 +43,30 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
-# Environment variables
+# Environment variables & secrets
 .env
 .env.*
+.env.local
+.env.development
+.env.production
 !.env.example
 backend/.env
+backend/.env.*
+backend/.env.local
+!backend/.env.example
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+serviceAccountKey.json
+google-credentials.json
+client_secrets*.json
+
+# Databases
+*.sqlite
+*.sqlite3
+*.db
 
 # Python
 __pycache__/

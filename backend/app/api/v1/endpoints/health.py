@@ -10,14 +10,14 @@ router = APIRouter()
 
 @router.get("", summary="Backend Health Check")
 def check_health(db: Session = Depends(get_db)) -> Dict[str, str]:
-    db_status = "ok"
+    db_status = "connected"
     try:
         db.execute(text("SELECT 1"))
-    except Exception as exc:
-        db_status = f"unreachable: {str(exc)}"
+    except Exception:
+        db_status = "disconnected"
 
     return {
-        "status": "healthy" if db_status == "ok" else "degraded",
+        "status": "healthy" if db_status == "connected" else "degraded",
         "app_name": settings.PROJECT_NAME,
         "version": settings.VERSION,
         "environment": settings.ENVIRONMENT,
