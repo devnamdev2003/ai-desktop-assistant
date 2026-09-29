@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, signal, computed, ViewChild } from '@angular/core';
+import { Component, ElementRef, inject, signal, computed, ViewChild, effect } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow, LogicalSize, Window } from '@tauri-apps/api/window';
@@ -198,6 +198,21 @@ export class App {
   manualCodeOrUrlInput = signal('');
 
   constructor() {
+    // Universal listener for auth forced-logout events from the global API validator
+    effect(() => {
+      const event = this.authService.forcedLogoutEvent();
+      if (event && event.reason) {
+        this.messages.set([]);
+        this.inputText.set('');
+        this.showSessionDrawer.set(false);
+        this.authMode.set('signin');
+        this.authService.authError.set(event.reason);
+        this.showAuthModal.set(true);
+        // Clear event so subsequent UI tab clicks (e.g. Create Account) are free to change authMode
+        this.authService.forcedLogoutEvent.set(null);
+      }
+    });
+
     if (typeof document !== 'undefined' && this.isTauriEnvironment()) {
       document.body.classList.add('is-tauri');
       // Ensure the taskbar icon is visible and always-on-top is enabled for the initial small/orb view
@@ -587,6 +602,10 @@ export class App {
     }
   }
 
+  dismissAuthError(): void {
+    this.authService.authError.set(null);
+  }
+
   toggleShowPassword(): void {
     this.showPassword.update((v) => !v);
   }
@@ -680,6 +699,10 @@ export class App {
     this.isLoadingUserSessions.set(true);
     try {
       const data = await this.authService.getActiveSessions();
+      if (!this.authService.isAuthenticated()) {
+        // User was deactivated/unauthorized and logged out by global validator
+        return;
+      }
       if (data && data.sessions && data.sessions.length > 0) {
         this.activeSessionsCount.set(data.active_sessions_count);
         this.userSessions.set(data.sessions);
@@ -696,7 +719,9 @@ export class App {
         ]);
       }
     } catch {
-      this.activeSessionsCount.set(1);
+      if (this.authService.isAuthenticated()) {
+        this.activeSessionsCount.set(1);
+      }
     } finally {
       this.isLoadingUserSessions.set(false);
     }
@@ -793,6 +818,16 @@ export class App {
     this.savedConversations.set([]);
     this.manualTokenInput.set('');
     this.manualCodeOrUrlInput.set('');
+  }
+
+  /**
+   * Immediately clears local session and forces the sign-in modal to appear with a notice.
+   */
+  forceLogoutWithNotice(errorMessage: string): void {
+    this.logout();
+    this.setAuthMode('signin');
+    this.authService.authError.set(errorMessage);
+    this.showAuthModal.set(true);
   }
 
   async testProtectedEndpoint(): Promise<void> {
@@ -1175,6 +1210,18 @@ export class App {
         return;
       }
       const errText = err instanceof Error ? err.message : 'Failed to communicate with AI';
+      const lower = errText.toLowerCase();
+
+      // If user was logged out due to deactivation or session expiration, skip error bubble
+      if (
+        lower.includes('deactivated') ||
+        lower.includes('inactive') ||
+        lower.includes('session has expired') ||
+        lower.includes('logged out')
+      ) {
+        return;
+      }
+
       this.errorMessage.set(errText);
       const errorMessageObj: ChatMessage = {
         id: `err-${Date.now()}`,
@@ -1241,18 +1288,49 @@ export class App {
       throw new Error('Unable to reach the assistant service. Please check your network connection and try again.');
     }
 
-    if (res.status === 401) {
+    if (res.status === 401 || res.status === 403) {
+      // Check for specific backend detail message
+      const errData = await res.clone().json().catch(() => ({}));
+      const detailMsg = String(errData.detail || '');
+      const lowerDetail = detailMsg.toLowerCase();
+
+      // If account is marked inactive or deactivated, do NOT refresh — force immediate logout!
+      if (lowerDetail.includes('inactive') || lowerDetail.includes('deactivated')) {
+        this.forceLogoutWithNotice('This account is deactivated. You have been logged out.');
+        throw new Error('This account is deactivated. You have been logged out.');
+      }
+
+      // If session was specifically revoked, force logout immediately without trying to refresh
+      if (lowerDetail.includes('revoked')) {
+        this.forceLogoutWithNotice('This session has been revoked. You have been logged out.');
+        throw new Error('This session has been revoked. You have been logged out.');
+      }
+
       // Session expired: attempt automatic refresh once
       const refreshed = await this.authService.refreshSession();
       if (refreshed) {
         return this.streamAiResponse(question, assistantId, initialAssistantMessage);
       }
-      this.openAuthModal();
+
+      this.forceLogoutWithNotice('Your session has expired. Please sign in again.');
       throw new Error('Your session has expired. Please sign in again.');
     }
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
+      const detailMsg = String(errData.detail || '');
+      const lowerDetail = detailMsg.toLowerCase();
+
+      if (lowerDetail.includes('inactive') || lowerDetail.includes('deactivated')) {
+        this.forceLogoutWithNotice('This account is deactivated. You have been logged out.');
+        throw new Error('This account is deactivated. You have been logged out.');
+      }
+
+      if (lowerDetail.includes('revoked') || lowerDetail.includes('invalid or expired token')) {
+        this.forceLogoutWithNotice('Your session has expired. Please sign in again.');
+        throw new Error('Your session has expired. Please sign in again.');
+      }
+
       throw new Error(errData.detail || 'Could not complete the request. Please try again.');
     }
 

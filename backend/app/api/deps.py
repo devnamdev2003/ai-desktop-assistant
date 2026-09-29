@@ -4,6 +4,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import decode_token
+from app.models.session import RefreshToken
 from app.models.user import User
 
 security_bearer = HTTPBearer(auto_error=False)
@@ -47,6 +48,20 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Check session revocation if session id (sid) is embedded in the access token
+    session_id = payload.get("sid")
+    if session_id is not None:
+        session = db.query(RefreshToken).filter(
+            RefreshToken.id == session_id,
+            RefreshToken.user_id == user_id,
+        ).first()
+        if not session or session.revoked:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session has been revoked",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(
@@ -56,8 +71,9 @@ def get_current_user(
 
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Inactive user account",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     return user
@@ -65,7 +81,11 @@ def get_current_user(
 
 def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_active:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Inactive user account",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return current_user
 
 

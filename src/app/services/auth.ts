@@ -86,14 +86,81 @@ export class AuthService {
   authError = signal<string | null>(null);
   authSuccessMessage = signal<string | null>(null);
   backendHealthy = signal<boolean | null>(null);
+  forcedLogoutEvent = signal<{ reason: string } | null>(null);
 
   private sessionPollTimer: any = null;
+  private refreshPromise: Promise<boolean> | null = null;
 
   constructor() {
     this.initAuthFromStorage();
     this.checkBackendHealth();
     this.handleUrlTokenCallback();
     this.initDeepLinkListener();
+  }
+
+  /**
+   * Universal API fetch wrapper that executes HTTP requests and validates responses globally.
+   * If any API responds with 401/403 or an inactive/deactivated account status, it immediately
+   * triggers forced logout across the entire application without needing repeated code.
+   */
+  async apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const res = await fetch(input, init);
+    const url = typeof input === 'string' ? input : (input as Request)?.url || '';
+    await this.validateApiResponse(res, url);
+    return res;
+  }
+
+  /**
+   * Universal forced logout triggered by the global API validator or interceptor.
+   * Evicts credentials, clears signals, and notifies listening components.
+   */
+  async triggerForcedLogout(reason: string): Promise<void> {
+    await this.logout();
+    this.authError.set(reason);
+    this.forcedLogoutEvent.set({ reason });
+  }
+
+  /**
+   * Explicit API response validator that services/components can call on any fetch Response.
+   * Automatically invokes forced logout if account is deactivated or session is dead.
+   */
+  async validateApiResponse(res: Response, url?: string): Promise<{ valid: boolean; detail?: string }> {
+    if (res.ok) {
+      return { valid: true };
+    }
+
+    if (res.status === 401 || res.status === 403) {
+      try {
+        const clone = res.clone();
+        const data = await clone.json().catch(() => null);
+        const detail = String(data?.detail || '');
+        const lower = detail.toLowerCase();
+
+        if (lower.includes('inactive') || lower.includes('deactivated')) {
+          await this.triggerForcedLogout('This account is deactivated. You have been logged out.');
+          return { valid: false, detail };
+        }
+
+        if (
+          lower.includes('revoked') ||
+          lower.includes('expired') ||
+          lower.includes('invalid') ||
+          (url && url.includes('/api/v1/auth/refresh'))
+        ) {
+          await this.triggerForcedLogout('Your session has expired. Please sign in again.');
+          return { valid: false, detail };
+        }
+      } catch {
+        // Fallback
+      }
+
+      if (url && !url.includes('/api/v1/auth/login')) {
+        await this.triggerForcedLogout('Your session has expired. Please sign in again.');
+        return { valid: false };
+      }
+    }
+
+    return { valid: true };
   }
 
   /**
@@ -346,7 +413,7 @@ export class AuthService {
 
     const endpoint = this.configService.getFullUrl('/api/v1/users/me/sessions');
     try {
-      const res = await fetch(endpoint, {
+      const res = await this.apiFetch(endpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -368,7 +435,7 @@ export class AuthService {
     this.isLoading.set(true);
     const endpoint = this.configService.getFullUrl('/api/v1/users/me/sessions/logout-all');
     try {
-      const res = await fetch(endpoint, {
+      const res = await this.apiFetch(endpoint, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -625,6 +692,11 @@ export class AuthService {
       }
 
       const tokenData: TokenResponse = await res.json();
+      if (!tokenData.user || !tokenData.user.is_active) {
+        this.logout();
+        return false;
+      }
+
       this.handleAuthSuccess(tokenData);
       return true;
     } catch {
@@ -644,15 +716,23 @@ export class AuthService {
       });
 
       if (!res.ok) {
-        if (res.status === 401) {
+        if (res.status === 401 || res.status === 403) {
           const refreshed = await this.refreshSession();
-          if (!refreshed) return null;
+          if (!refreshed) {
+            this.logout();
+            return null;
+          }
           return this.fetchCurrentUser();
         }
         return null;
       }
 
       const user: UserProfile = await res.json();
+      if (!user || !user.is_active) {
+        this.logout();
+        return null;
+      }
+
       this.currentUser.set(user);
       if (typeof window !== 'undefined') {
         localStorage.setItem(this.USER_KEY, JSON.stringify(user));
@@ -672,9 +752,17 @@ export class AuthService {
 
     try {
       const endpoint = this.configService.getFullUrl('/api/v1/chat/conversations');
-      const res = await fetch(endpoint, {
+      const res = await this.apiFetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (res.status === 401 || res.status === 403) {
+        const refreshed = await this.refreshSession();
+        if (refreshed) {
+          return this.getSavedConversations();
+        }
+        this.logout();
+        return [];
+      }
       if (res.ok) {
         return await res.json();
       }
@@ -693,9 +781,17 @@ export class AuthService {
 
     try {
       const endpoint = this.configService.getFullUrl(`/api/v1/chat/conversations/${conversationId}`);
-      const res = await fetch(endpoint, {
+      const res = await this.apiFetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (res.status === 401 || res.status === 403) {
+        const refreshed = await this.refreshSession();
+        if (refreshed) {
+          return this.getConversation(conversationId);
+        }
+        this.logout();
+        return null;
+      }
       if (res.ok) {
         return await res.json();
       }
@@ -762,7 +858,7 @@ export class AuthService {
 
     try {
       const endpoint = this.configService.getFullUrl(`/api/v1/chat/conversations/${conversationId}`);
-      const res = await fetch(endpoint, {
+      const res = await this.apiFetch(endpoint, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

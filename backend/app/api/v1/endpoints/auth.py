@@ -29,13 +29,12 @@ PENDING_DESKTOP_SESSIONS: Dict[str, Dict[str, Any]] = {}
 
 def _issue_tokens_for_user(user: User, db: Session) -> TokenResponse:
     """Helper to generate access and refresh tokens, persist session in DB, and return response."""
-    access_token = create_access_token(subject=user.id, extra_claims={"email": user.email})
     refresh_token = create_refresh_token(subject=user.id)
 
     # Calculate expiry
     refresh_expires_at = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
 
-    # Store refresh token hash in database
+    # Store refresh token hash in database first to get the session ID
     db_token = RefreshToken(
         user_id=user.id,
         token_hash=hash_token(refresh_token),
@@ -44,6 +43,16 @@ def _issue_tokens_for_user(user: User, db: Session) -> TokenResponse:
     )
     db.add(db_token)
     db.commit()
+    db.refresh(db_token)
+
+    # Embed the session_id (sid) in the access token claims
+    access_token = create_access_token(
+        subject=user.id,
+        extra_claims={
+            "email": user.email,
+            "sid": db_token.id,
+        },
+    )
 
     return TokenResponse(
         access_token=access_token,
@@ -125,7 +134,7 @@ def login_user(
 
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="This account is deactivated. Please contact support.",
         )
 
@@ -264,6 +273,11 @@ async def google_oauth_callback(
         db.commit()
         db.refresh(user)
     else:
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="This account is deactivated. Please contact support.",
+            )
         # Update user profile with latest Google data
         user.google_id = google_id
         if full_name:
@@ -507,6 +521,11 @@ async def verify_google_auth(
         db.commit()
         db.refresh(user)
     else:
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="This account is deactivated. Please contact support.",
+            )
         user.google_id = google_id
         if full_name:
             user.full_name = full_name

@@ -67,4 +67,99 @@ describe('App', () => {
     app.closeOrbContextMenu();
     expect(app.showOrbContextMenu()).toBe(false);
   });
+
+  it('should immediately log out user and show signin modal on forceLogoutWithNotice', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    app.messages.set([
+      { id: '1', sender: 'user', text: 'hello', timestamp: new Date() },
+    ]);
+    app.forceLogoutWithNotice('This account is deactivated. You have been logged out.');
+
+    expect(app.authService.isAuthenticated()).toBe(false);
+    expect(app.showAuthModal()).toBe(true);
+    expect(app.authMode()).toBe('signin');
+    expect(app.authService.authError()).toBe('This account is deactivated. You have been logged out.');
+    expect(app.messages().length).toBe(0);
+  });
+
+  it('global validator should force logout when an API returns 401 with inactive user account', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    const authService = app.authService;
+
+    // Simulate logged in user
+    authService.currentUser.set({
+      id: 'usr-123',
+      email: 'test@example.com',
+      is_active: true,
+      is_superuser: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    expect(authService.isAuthenticated()).toBe(true);
+
+    // Create a mock Response mimicking http://localhost:8000/api/v1/users/me/sessions 401
+    const mockResponse = new Response(JSON.stringify({ detail: 'Inactive user account' }), {
+      status: 401,
+      statusText: 'Unauthorized',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const result = await authService.validateApiResponse(mockResponse, '/api/v1/users/me/sessions');
+    expect(result.valid).toBe(false);
+    expect(authService.isAuthenticated()).toBe(false);
+    expect(authService.authError()).toBe('This account is deactivated. You have been logged out.');
+    expect(authService.forcedLogoutEvent()?.reason).toBe('This account is deactivated. You have been logged out.');
+  });
+
+  it('global validator should force logout when session is revoked', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    const authService = app.authService;
+
+    authService.currentUser.set({
+      id: 'usr-456',
+      email: 'revoked@example.com',
+      is_active: true,
+      is_superuser: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    expect(authService.isAuthenticated()).toBe(true);
+
+    const mockResponse = new Response(JSON.stringify({ detail: 'Session has been revoked' }), {
+      status: 401,
+      statusText: 'Unauthorized',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const result = await authService.validateApiResponse(mockResponse, '/api/v1/chat');
+    expect(result.valid).toBe(false);
+    expect(authService.isAuthenticated()).toBe(false);
+    expect(authService.authError()).toBe('Your session has expired. Please sign in again.');
+  });
+
+  it('allows user to switch between signin and signup modes and dismiss error banner', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    
+    // Simulate forced logout error
+    app.authService.authError.set('Your session has expired. Please sign in again.');
+    app.authMode.set('signin');
+    app.showAuthModal.set(true);
+
+    expect(app.authMode()).toBe('signin');
+    expect(app.authService.authError()).toBe('Your session has expired. Please sign in again.');
+
+    // Switch to create account
+    app.setAuthMode('signup');
+    expect(app.authMode()).toBe('signup');
+    expect(app.authService.authError()).toBeNull();
+
+    // Re-set error and test explicit dismissal
+    app.authService.authError.set('Some test notice');
+    app.dismissAuthError();
+    expect(app.authService.authError()).toBeNull();
+  });
 });

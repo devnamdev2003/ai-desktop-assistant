@@ -706,14 +706,14 @@
       </div>
       } @else {
       <div class="flex rounded-xl bg-white/5 p-1 mb-3.5 border border-white/10 shrink-0">
-        <button type="button" (click)="setAuthMode('signin')"
+        <button id="modal-tab-signin-btn" type="button" (click)="setAuthMode('signin')"
           class="flex-1 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer text-center"
-          [class]="authMode() === 'signin' ? 'bg-purple-600 text-white shadow' : 'text-white/60 hover:text-white'">
+          [class]="authMode() === 'signin' ? 'bg-purple-600 text-white shadow font-semibold' : 'text-white/60 hover:text-white'">
           Sign In
         </button>
-        <button type="button" (click)="setAuthMode('signup')"
+        <button id="modal-tab-signup-btn" type="button" (click)="setAuthMode('signup')"
           class="flex-1 py-1.5 text-xs font-medium rounded-lg transition cursor-pointer text-center"
-          [class]="authMode() === 'signup' ? 'bg-purple-600 text-white shadow' : 'text-white/60 hover:text-white'">
+          [class]="authMode() === 'signup' ? 'bg-purple-600 text-white shadow font-semibold' : 'text-white/60 hover:text-white'">
           Create Account
         </button>
       </div>
@@ -724,20 +724,34 @@
 
         <!-- Global Alerts -->
         @if (authService.authError()) {
-        <div class="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300 flex items-start gap-2">
+        <div class="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300 flex items-start gap-2.5 transition-all">
           <svg class="h-4 w-4 text-red-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span class="flex-1 leading-relaxed">{{ authService.authError() }}</span>
+          <span class="flex-1 leading-relaxed select-text">{{ authService.authError() }}</span>
+          <button type="button" (click)="dismissAuthError()" title="Dismiss message" aria-label="Dismiss message"
+            class="shrink-0 p-1 -mr-1 -mt-1 text-red-400/80 hover:text-white hover:bg-red-500/20 rounded-lg transition cursor-pointer">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
         }
 
         @if (authService.authSuccessMessage()) {
-        <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 flex items-center gap-2">
-          <svg class="h-4 w-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <span>{{ authService.authSuccessMessage() }}</span>
+        <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 flex items-center justify-between gap-2.5 transition-all">
+          <div class="flex items-center gap-2 min-w-0">
+            <svg class="h-4 w-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span class="truncate">{{ authService.authSuccessMessage() }}</span>
+          </div>
+          <button type="button" (click)="authService.authSuccessMessage.set(null)" title="Dismiss" aria-label="Dismiss"
+            class="shrink-0 p-1 -mr-1 text-emerald-400/80 hover:text-white hover:bg-emerald-500/20 rounded-lg transition cursor-pointer">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
         }
 
