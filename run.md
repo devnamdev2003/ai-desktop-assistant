@@ -1,3 +1,5 @@
+update the tauri.conf.json, environment.ts file 
+
 to run app:
 ```
 npx tauri dev
