@@ -113,7 +113,7 @@ export class App {
   private readonly sanitizer = inject(DomSanitizer);
 
   @ViewChild('messagesContainer') private messagesContainer?: ElementRef<HTMLDivElement>;
-  @ViewChild('chatInput') private chatInputElement?: ElementRef<HTMLInputElement>;
+  @ViewChild('chatInput') private chatInputElement?: ElementRef<HTMLTextAreaElement>;
 
   isExpanded = typeof window !== 'undefined' ? !this.isTauriEnvironment() : false;
   isMaximized = signal(false);
@@ -1182,8 +1182,36 @@ export class App {
   }
 
   onInputChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.inputText.set(input.value);
+    const textarea = event.target as HTMLTextAreaElement;
+    this.inputText.set(textarea.value);
+    this.adjustTextareaHeight(textarea);
+  }
+
+  onChatKeyDown(event: KeyboardEvent): void {
+    // Shift + Enter: Allow natural newline break without sending
+    if (event.key === 'Enter' && event.shiftKey) {
+      // Natural multiline break happens in textarea, resize smoothly
+      setTimeout(() => {
+        if (this.chatInputElement?.nativeElement) {
+          this.adjustTextareaHeight(this.chatInputElement.nativeElement);
+        }
+      }, 0);
+      return;
+    }
+
+    // Enter without Shift: Send message
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      this.sendMessage();
+    }
+  }
+
+  adjustTextareaHeight(element?: HTMLTextAreaElement): void {
+    const el = element || this.chatInputElement?.nativeElement;
+    if (!el) return;
+    el.style.height = 'auto';
+    const newHeight = Math.min(Math.max(el.scrollHeight, 24), 160);
+    el.style.height = `${newHeight}px`;
   }
 
   useSuggestion(suggestion: string): void {
@@ -1268,6 +1296,7 @@ export class App {
     this.inputText.set('');
     if (this.chatInputElement?.nativeElement) {
       this.chatInputElement.nativeElement.value = '';
+      this.chatInputElement.nativeElement.style.height = 'auto';
     }
     this.errorMessage.set(null);
     this.isLoading.set(true);

@@ -129,21 +129,6 @@
           }
         </button>
 
-        <!-- SETTINGS & PREFERENCES BUTTON -->
-        @if (authService.isAuthenticated()) {
-        <button id="header-settings-btn" type="button" (mousedown)="$event.stopPropagation()"
-          (click)="openSettingsModal('preferences')"
-          title="Settings & Custom Instructions (Ctrl+,)"
-          aria-label="Settings"
-          class="flex h-7 w-7 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition cursor-pointer">
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </button>
-        }
-
         <!-- USER PROFILE BUTTON (Shows user profile details and security options) -->
         <button id="header-profile-btn" type="button" (mousedown)="$event.stopPropagation()"
           (click)="openProfileModal(authService.isAuthenticated() ? 'profile' : 'signin')"
@@ -345,13 +330,13 @@
 
           <!-- Title -->
           <h2
-            [class]="isMaximized() ? 'text-2xl font-semibold text-white tracking-tight' : 'text-lg font-medium text-white'">
-            What can I help you with today?
+            [class]="isMaximized() ? 'text-2xl md:text-3xl font-normal text-white tracking-tight' : 'text-xl font-normal text-white tracking-tight'">
+            Any new ideas to explore?
           </h2>
 
           <!-- Description -->
           <p
-            [class]="isMaximized() ? 'mt-2 text-sm text-white/55 max-w-md' : 'mt-1.5 text-xs text-white/50 max-w-[280px]'">
+            [class]="isMaximized() ? 'mt-2 text-sm text-white/50 max-w-md' : 'mt-1.5 text-xs text-white/45 max-w-[280px]'">
             Ask Aivora any programming, research, or reasoning question.
           </p>
 
@@ -486,23 +471,31 @@
 
     <!-- BOTTOM INPUT BAR (ONLY ACTIVE WHEN SIGNED IN) -->
     @if (authService.isAuthenticated()) {
-    <div id="aivora-input-bar" class="border-t border-white/10 bg-slate-950 shrink-0"
-      [class]="isMaximized() ? 'p-4 md:px-12' : 'p-3.5 bg-slate-950/80'">
-      <div [class]="isMaximized() ? 'max-w-5xl mx-auto w-full' : 'w-full'">
-        <form (submit)="$event.preventDefault(); sendMessage()"
-          class="flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3.5 py-2.5 focus-within:border-white/30 focus-within:bg-white/[0.07] focus-within:shadow-none transition-colors">
+    <div id="aivora-input-bar" class="border-t border-white/10 bg-slate-950/90 shrink-0"
+      [class]="isMaximized() ? 'p-4 md:px-16' : 'p-3 bg-slate-950/95'">
+      <div [class]="isMaximized() ? 'max-w-4xl mx-auto w-full' : 'w-full'">
+        
+        <!-- Clean Multiline Input Box supporting Shift+Enter to break line and Enter to send -->
+        <div class="relative flex items-end gap-2.5 rounded-2xl border border-white/10 bg-white/5 p-2.5 shadow-lg transition-colors focus-within:border-white/25 focus-within:bg-white/[0.08]">
+          
+          <!-- Textarea (Auto-growing, multiline, Shift+Enter for new line, Enter to send) -->
+          <textarea #chatInput id="aivora-chat-input"
+            [value]="inputText()"
+            (input)="onInputChange($event)"
+            (keydown)="onChatKeyDown($event)"
+            [disabled]="isLoading()"
+            placeholder="Ask Aivora..."
+            rows="1"
+            class="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35 resize-none px-2 py-1 leading-relaxed selection:bg-purple-600/40 no-scrollbar overflow-y-auto"
+            [style.minHeight]="'26px'"
+            [style.maxHeight]="'160px'"></textarea>
 
-          <input #chatInput id="aivora-chat-input" type="text" [value]="inputText()" (input)="onInputChange($event)"
-            [disabled]="isLoading()" placeholder="Ask Aivora..." autocomplete="off"
-            class="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35 disabled:opacity-50" />
-
+          <!-- Send / Stop Button -->
           <button id="aivora-send-button" type="button" (click)="sendMessage()"
             [disabled]="isLoading() || (!inputText().trim() && !isStreamingActive())"
-            [title]="isStreamingActive() ? 'Stop response' : 'Send message'"
-            [attr.aria-label]="isStreamingActive() ? 'Stop response' : 'Send message'" class="flex h-8 w-8 items-center justify-center rounded-xl
-                     bg-purple-600 text-white transition
-                     hover:bg-purple-500 active:scale-95
-                     disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-purple-600">
+            [title]="isStreamingActive() ? 'Stop response' : 'Send message (Enter)'"
+            [attr.aria-label]="isStreamingActive() ? 'Stop response' : 'Send message'"
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-purple-600 text-white transition hover:bg-purple-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-purple-600 cursor-pointer shadow-md mb-0.5">
             @if (isLoading()) {
             <svg class="h-4 w-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -518,19 +511,20 @@
             </svg>
             }
           </button>
+        </div>
 
-        </form>
-
-        <div class="mt-1.5 flex items-center justify-between px-1 text-[10px] text-white/30">
-          <span>Aivora AI Assistant • Ready</span>
+        <!-- Hint beneath input -->
+        <div class="mt-1.5 flex items-center justify-between px-2 text-[10px] text-white/30">
+          <span>Shift + Enter for new line • Enter to send</span>
           <div class="flex items-center gap-2">
             @if (isMaximized()) {
-            <span>Press Maximize button again to restore compact mode</span>
+            <span>Maximize mode</span>
             } @else {
-            <span>Enter to send</span>
+            <span>Compact mode</span>
             }
           </div>
         </div>
+
       </div>
     </div>
     }
@@ -1225,14 +1219,6 @@
         </div>
         }
 
-      </div>
-
-      <!-- Persistent Modal Footer -->
-      <div class="flex justify-end items-center pt-3 mt-2 border-t border-white/10 shrink-0">
-        <button type="button" (click)="closeAuthModal()"
-          class="px-4 py-1.5 rounded-lg text-xs font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/15 transition cursor-pointer">
-          Done
-        </button>
       </div>
 
     </div>
