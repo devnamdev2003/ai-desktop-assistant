@@ -5,5 +5,5 @@ export const environment = {
   apiUrl: 'http://localhost:8000',
   // apiUrl: 'https://ai-desktop-api.vercel.app',
   appName: 'Aivora Desktop AI Assistant',
-  version: '0.1.2',
+  version: '0.1.9',
 };

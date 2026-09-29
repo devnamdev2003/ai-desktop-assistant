@@ -1259,10 +1259,24 @@ export class App {
   ): Promise<void> {
     this.activeAbortController = new AbortController();
 
+    // Build the in-memory chat history from the current active session
+    // (excluding the latest question itself, which is passed in 'question')
+    const priorHistory = this.messages()
+      .filter((m) => !m.isError && m.id !== initialAssistantMessage.id && m.text && m.text.trim())
+      .slice(0, -1) // Exclude the question just appended
+      .map((m) => ({
+        role: m.sender === 'user' ? 'user' : 'model',
+        sender: m.sender,
+        content: m.text,
+        text: m.text,
+      }));
+
     const payload = JSON.stringify({
       question,
-      conversation_id: this.currentSessionId() || undefined,
       stream: true,
+      // Pass active session history in-memory directly to AI
+      history: priorHistory,
+      messages: priorHistory,
     });
     const authHeaders = {
       Accept: 'text/event-stream, application/json',
@@ -1447,7 +1461,6 @@ export class App {
     );
     this.isStreamingActive.set(false);
     this.playCompletionChime();
-    this.loadSavedConversations();
     this.scrollToBottom();
   }
 

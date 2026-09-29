@@ -34,13 +34,17 @@ async def stream_gemini_response(prompt: str, history: Optional[List[dict]] = No
         contents = []
         if history:
             for msg in history:
-                role = "user" if msg.get("sender") == "user" else "model"
-                contents.append(
-                    types.Content(
-                        role=role,
-                        parts=[types.Part.from_text(text=msg.get("text", ""))],
+                # Accept role or sender, and text or content
+                sender_val = msg.get("sender") or msg.get("role") or "user"
+                role = "user" if sender_val == "user" else "model"
+                text_val = msg.get("text") or msg.get("content") or ""
+                if text_val:
+                    contents.append(
+                        types.Content(
+                            role=role,
+                            parts=[types.Part.from_text(text=text_val)],
+                        )
                     )
-                )
         contents.append(
             types.Content(
                 role="user",
@@ -53,6 +57,9 @@ async def stream_gemini_response(prompt: str, history: Optional[List[dict]] = No
             temperature=0.7,
             max_output_tokens=2048,
         )
+        print("="*40)
+        print(contents)
+        print("="*40)
         response_stream = await client.aio.models.generate_content_stream(
             model="gemini-3.5-flash-lite",
             contents=contents,
@@ -117,8 +124,19 @@ async def send_chat_message(
     conv_id = chat_req.conversation_id
     history_messages = []
 
-    # If conversation exists for this authenticated user, load context
-    if current_user and conv_id:
+    # 1. First check: Client passed in-memory transient history directly from frontend
+    client_history = chat_req.history or chat_req.messages
+    if client_history:
+        for item in client_history:
+            item_dict = item.model_dump() if hasattr(item, "model_dump") else dict(item)
+            sender = item_dict.get("sender") or item_dict.get("role") or "user"
+            text = item_dict.get("text") or item_dict.get("content") or ""
+            if text:
+                history_messages.append({"sender": sender, "text": text})
+
+    # 2. Optional: If user explicitly opted into saving to DB and provided an existing conv_id
+    should_save_to_db = bool(chat_req.save_to_db and current_user)
+    if should_save_to_db and conv_id and not history_messages:
         existing_conv = (
             db.query(Conversation)
             .filter(Conversation.id == conv_id, Conversation.user_id == current_user.id)
@@ -129,13 +147,13 @@ async def send_chat_message(
                 db.query(ChatMessageRecord)
                 .filter(ChatMessageRecord.conversation_id == conv_id)
                 .order_by(ChatMessageRecord.created_at.asc())
-                .limit(8)
+                .limit(10)
                 .all()
             )
             history_messages = [{"sender": r.sender, "text": r.text} for r in prev_records]
 
-    # Persist conversation and user message up front
-    if current_user:
+    # Only persist conversation if explicitly requested
+    if should_save_to_db:
         if conv_id:
             conv = (
                 db.query(Conversation)
@@ -146,7 +164,6 @@ async def send_chat_message(
             conv = None
 
         if not conv:
-            # Create a title based on first 40 chars of question
             title = chat_req.question.strip()[:40] or "New Chat"
             conv = Conversation(user_id=current_user.id, title=title)
             db.add(conv)
@@ -157,6 +174,8 @@ async def send_chat_message(
         user_msg = ChatMessageRecord(conversation_id=conv.id, sender="user", text=chat_req.question)
         db.add(user_msg)
         db.commit()
+    else:
+        conv_id = None
 
     # Determine if client requested SSE streaming
     accept_header = request.headers.get("accept", "").lower()
@@ -166,19 +185,19 @@ async def send_chat_message(
         async def event_generator():
             accumulated_tokens = []
             try:
-                # Initial event to emit conversation_id immediately
-                init_data = json.dumps({"token": "", "conversation_id": conv_id, "done": False})
+                # Initial event to emit immediately
+                init_data = json.dumps({"token": "", "conversation_id": None, "done": False})
                 yield f"data: {init_data}\n\n"
 
-                # Stream token generation
+                # Stream token generation directly from Gemini with in-memory history
                 async for token in stream_gemini_response(chat_req.question, history=history_messages):
                     accumulated_tokens.append(token)
-                    token_data = json.dumps({"token": token, "conversation_id": conv_id, "done": False})
+                    token_data = json.dumps({"token": token, "conversation_id": None, "done": False})
                     yield f"data: {token_data}\n\n"
 
-                # Record completed assistant message in database
+                # Record completed assistant message ONLY if should_save_to_db is True
                 full_answer = "".join(accumulated_tokens).strip()
-                if current_user and conv_id and full_answer:
+                if should_save_to_db and conv_id and full_answer:
                     try:
                         assistant_msg = ChatMessageRecord(
                             conversation_id=conv_id,
@@ -194,7 +213,7 @@ async def send_chat_message(
                 done_data = json.dumps({
                     "token": "",
                     "answer": full_answer,
-                    "conversation_id": conv_id,
+                    "conversation_id": None,
                     "done": True,
                 })
                 yield f"data: {done_data}\n\n"
@@ -202,7 +221,7 @@ async def send_chat_message(
             except Exception as stream_err:
                 err_data = json.dumps({
                     "error": str(stream_err),
-                    "conversation_id": conv_id,
+                    "conversation_id": None,
                     "done": True,
                 })
                 yield f"data: {err_data}\n\n"
@@ -220,7 +239,7 @@ async def send_chat_message(
 
     # Fallback to non-streaming response
     answer = await generate_gemini_response(chat_req.question, history=history_messages)
-    if current_user and conv_id:
+    if should_save_to_db and conv_id:
         assistant_msg = ChatMessageRecord(conversation_id=conv_id, sender="assistant", text=answer)
         db.add(assistant_msg)
         db.commit()
@@ -228,7 +247,7 @@ async def send_chat_message(
     return ChatResponse(
         question=chat_req.question,
         answer=answer,
-        conversation_id=conv_id,
+        conversation_id=None,
     )
 
 

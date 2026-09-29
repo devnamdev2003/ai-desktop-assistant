@@ -38,10 +38,20 @@ class ConversationRead(ConversationBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ChatHistoryItem(BaseModel):
+    role: Optional[str] = None
+    sender: Optional[str] = None
+    text: Optional[str] = None
+    content: Optional[str] = None
+
+
 class ChatRequest(BaseModel):
     question: str
     conversation_id: Optional[int] = None
     stream: Optional[bool] = True
+    history: Optional[List[ChatHistoryItem]] = None
+    messages: Optional[List[ChatHistoryItem]] = None
+    save_to_db: Optional[bool] = False
 
 
 class ChatResponse(BaseModel):
