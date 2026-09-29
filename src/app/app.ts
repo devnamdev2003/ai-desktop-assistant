@@ -47,6 +47,18 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#039;');
 }
 
+function sanitizeHtml(html: string): string {
+  if (!html) return '';
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+    .replace(/<embed\b[^>]*>/gi, '')
+    .replace(/\s+on[a-z]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, '')
+    .replace(/href\s*=\s*(?:['"]javascript:[^'"]*['"]|javascript:[^\s>]+)/gi, 'href="#"');
+}
+
 // Configure marked with GitHub Flavored Markdown, line breaks, and enhanced code blocks
 marked.use({
   gfm: true,
@@ -74,8 +86,12 @@ marked.use({
       );
     },
     link({ href, title, text }: { href: string; title?: string | null; text: string }): string {
+      const trimmedHref = (href || '').trim();
+      // Block unsafe protocols like javascript:, data:, vbscript:
+      const isSafeProtocol = /^(https?:|mailto:|aivora:|\/|#)/i.test(trimmedHref);
+      const safeHref = isSafeProtocol ? escapeHtml(trimmedHref) : '#';
       const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
-      return `<a href="${href}" target="_blank" rel="noopener noreferrer"${titleAttr}>${text}</a>`;
+      return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer"${titleAttr}>${text}</a>`;
     },
   },
 });
@@ -1359,7 +1375,8 @@ export class App {
     if (!text) return '';
     try {
       const parsed = marked.parse(text, { async: false }) as string;
-      return this.sanitizer.bypassSecurityTrustHtml(parsed);
+      const clean = sanitizeHtml(parsed);
+      return this.sanitizer.bypassSecurityTrustHtml(clean);
     } catch (e) {
       console.warn('Error parsing markdown:', e);
       return this.sanitizer.bypassSecurityTrustHtml(escapeHtml(text));

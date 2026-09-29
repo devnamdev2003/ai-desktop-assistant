@@ -3,6 +3,8 @@ to run app:
 npx tauri dev
 ```
 
+$env:TAURI_SIGNING_PRIVATE_KEY="$HOME\.tauri\aivora.key"
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD="YOUR_PASSWORD"
 to buils exe file:
 ```
 npx tauri build

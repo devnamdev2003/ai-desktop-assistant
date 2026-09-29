@@ -276,7 +276,7 @@ async def google_oauth_callback(
     token_bundle = _issue_tokens_for_user(user, db)
 
     # If this was initiated by the desktop app browser flow, store tokens for desktop polling
-    if state and (state in PENDING_DESKTOP_SESSIONS or state.startswith("desk_")):
+    if state and state in PENDING_DESKTOP_SESSIONS:
         PENDING_DESKTOP_SESSIONS[state] = {
             "status": "authenticated",
             "created_at": datetime.now(timezone.utc),

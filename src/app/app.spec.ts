@@ -16,6 +16,9 @@ describe('App', () => {
 
   it('should render the orb button initially', async () => {
     const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    app.isExpanded = false;
+    fixture.detectChanges();
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('#aivora-orb-button')).toBeTruthy();
@@ -37,6 +40,16 @@ describe('App', () => {
     const md = '# Hello World\n\nThis is **bold** and `code`.\n\n```python\nprint("hi")\n```';
     const formatted = app.formatAnswer(md);
     expect(formatted).toBeTruthy();
+  });
+
+  it('should sanitize dangerous HTML tags and javascript: links in markdown', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    const malicious = '<script>alert(1)</script>\n\n<iframe src="evil.com"></iframe>\n\n<a href="javascript:alert(1)">Click me</a>';
+    const result = String(app.formatAnswer(malicious));
+    expect(result).not.toContain('<script');
+    expect(result).not.toContain('<iframe');
+    expect(result).not.toContain('javascript:');
   });
 
   it('should handle quitApp without error', async () => {
