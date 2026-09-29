@@ -104,6 +104,8 @@ marked.use({
     '(document:mousemove)': 'handleMouseMove($event)',
     '(document:mouseup)': 'handleMouseUp()',
     '(click)': 'handleGlobalClick($event)',
+    '(contextmenu)': 'handleContextMenu($event)',
+    '(document:keydown)': 'handleGlobalKeydown($event)',
   },
 })
 export class App {
@@ -1585,6 +1587,150 @@ export class App {
 
   closeOrbContextMenu(): void {
     this.showOrbContextMenu.set(false);
+  }
+
+  /**
+   * Disables browser right-click context menus inside the desktop app
+   * (except when right-clicking the collapsed floating orb which opens Aivora's custom orb menu).
+   */
+  handleContextMenu(event: MouseEvent): void {
+    // If the right-click was on the collapsed orb, onOrbContextMenu handles opening the custom orb menu
+    const target = event.target as HTMLElement;
+    if (target?.closest('#aivora-orb-button')) {
+      return;
+    }
+    // Suppress default web browser context menu (Inspect Element, Back, Reload, View Source)
+    event.preventDefault();
+  }
+
+  /**
+   * Intercepts and disables browser-specific shortcuts that should not occur in a desktop app:
+   * - Ctrl+R / Cmd+R / F5: Accidental page reload
+   * - Ctrl+Shift+R / Cmd+Shift+R: Hard reload
+   * - Ctrl+W / Cmd+W: Browser tab close
+   * - Ctrl+P / Cmd+P: Browser print dialog
+   * - Ctrl+U / Cmd+U: View page source
+   * - Ctrl+S / Cmd+S: Save webpage HTML
+   * - Ctrl+O: Open local file dialog
+   * - Backspace outside input fields: Browser back navigation
+   * 
+   * Also adds native desktop app shortcuts:
+   * - Escape: Closes active modal or drawer, or minimizes/cancels
+   * - Ctrl+, / Cmd+,: Opens Settings / Profile modal
+   * - Ctrl+K / Cmd+K: Focuses chat input bar
+   */
+  handleGlobalKeydown(event: KeyboardEvent): void {
+    const key = event.key;
+    const isCtrlOrCmd = event.ctrlKey || event.metaKey;
+    const target = event.target as HTMLElement;
+    const isInputOrTextarea = target && (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable
+    );
+
+    // 1. Block F5 refresh
+    if (key === 'F5') {
+      event.preventDefault();
+      return;
+    }
+
+    // 2. Block accidental browser reload (Ctrl+R / Cmd+R)
+    if (isCtrlOrCmd && (key === 'r' || key === 'R')) {
+      event.preventDefault();
+      return;
+    }
+
+    // 3. Block accidental webpage save (Ctrl+S / Cmd+S)
+    if (isCtrlOrCmd && (key === 's' || key === 'S')) {
+      event.preventDefault();
+      return;
+    }
+
+    // 4. Block browser print dialog (Ctrl+P / Cmd+P)
+    if (isCtrlOrCmd && (key === 'p' || key === 'P')) {
+      event.preventDefault();
+      return;
+    }
+
+    // 5. Block view page source (Ctrl+U / Cmd+U)
+    if (isCtrlOrCmd && (key === 'u' || key === 'U')) {
+      event.preventDefault();
+      return;
+    }
+
+    // 6. Block open local file (Ctrl+O / Cmd+O)
+    if (isCtrlOrCmd && (key === 'o' || key === 'O')) {
+      event.preventDefault();
+      return;
+    }
+
+    // 7. Block browser tab close (Ctrl+W)
+    if (isCtrlOrCmd && (key === 'w' || key === 'W')) {
+      event.preventDefault();
+      return;
+    }
+
+    if (isCtrlOrCmd && (key === 'j' || key === 'J')) {
+      event.preventDefault();
+      return;
+    }
+
+    if (isCtrlOrCmd && (key === 'f' || key === 'F')) {
+      event.preventDefault();
+      return;
+    }
+
+    // 8. Prevent Backspace from navigating backwards when not inside an editable input
+    if (key === 'Backspace' && !isInputOrTextarea) {
+      event.preventDefault();
+      return;
+    }
+
+    // ----------------------------------------
+    // Native Desktop Productivity Shortcuts
+    // ----------------------------------------
+
+    // Escape: dismiss modal, close session drawer, or cancel active voice/search
+    if (key === 'Escape') {
+      if (this.showAuthModal()) {
+        this.closeAuthModal();
+        event.preventDefault();
+        return;
+      }
+      if (this.showUpdateModal()) {
+        this.closeUpdateModal();
+        event.preventDefault();
+        return;
+      }
+      if (this.showSessionDrawer()) {
+        this.closeSessionDrawer();
+        event.preventDefault();
+        return;
+      }
+      if (this.showOrbContextMenu()) {
+        this.closeOrbContextMenu();
+        event.preventDefault();
+        return;
+      }
+    }
+
+    // Ctrl+K / Cmd+K: Focus chat input bar
+    if (isCtrlOrCmd && (key === 'k' || key === 'K') && !event.shiftKey) {
+      event.preventDefault();
+      if (!this.isExpanded) {
+        this.toggleAssistant();
+      }
+      setTimeout(() => this.chatInputElement?.nativeElement?.focus(), 60);
+      return;
+    }
+
+    // Ctrl+, / Cmd+,: Open Profile & Settings modal
+    if (isCtrlOrCmd && key === ',') {
+      event.preventDefault();
+      this.openSettingsModal();
+      return;
+    }
   }
 
   async quitApp(event?: Event): Promise<void> {

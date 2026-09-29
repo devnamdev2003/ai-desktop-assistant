@@ -162,4 +162,35 @@ describe('App', () => {
     app.dismissAuthError();
     expect(app.authService.authError()).toBeNull();
   });
+
+  it('prevents browser shortcuts like Ctrl+R, F5, Ctrl+W and blocks web contextmenu', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+
+    // Test Ctrl+R blocking
+    const ctrlREvent = new KeyboardEvent('keydown', { key: 'r', ctrlKey: true, cancelable: true });
+    app.handleGlobalKeydown(ctrlREvent);
+    expect(ctrlREvent.defaultPrevented).toBe(true);
+
+    // Test F5 blocking
+    const f5Event = new KeyboardEvent('keydown', { key: 'F5', cancelable: true });
+    app.handleGlobalKeydown(f5Event);
+    expect(f5Event.defaultPrevented).toBe(true);
+
+    // Test Ctrl+W blocking
+    const ctrlWEvent = new KeyboardEvent('keydown', { key: 'w', ctrlKey: true, cancelable: true });
+    app.handleGlobalKeydown(ctrlWEvent);
+    expect(ctrlWEvent.defaultPrevented).toBe(true);
+
+    // Test context menu prevention outside orb
+    const contextEvent = new MouseEvent('contextmenu', { cancelable: true });
+    app.handleContextMenu(contextEvent);
+    expect(contextEvent.defaultPrevented).toBe(true);
+
+    // Test Escape closes auth modal
+    app.showAuthModal.set(true);
+    const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+    app.handleGlobalKeydown(escapeEvent);
+    expect(app.showAuthModal()).toBe(false);
+  });
 });
