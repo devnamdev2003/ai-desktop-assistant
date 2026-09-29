@@ -66,6 +66,13 @@ export interface SessionMetadata {
   platform: string;
 }
 
+export interface UserPreferencesData {
+  id?: string;
+  user_id?: string;
+  sound_enabled: boolean;
+  custom_instruction?: string | null;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -866,6 +873,53 @@ export class AuthService {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Fetches user preferences from the database table (users/me/preferences).
+   */
+  async fetchUserPreferences(): Promise<UserPreferencesData | null> {
+    const token = this.accessToken;
+    if (!token) return null;
+
+    try {
+      const endpoint = this.configService.getFullUrl('/api/v1/users/me/preferences');
+      const res = await this.apiFetch(endpoint, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Fallback
+    }
+    return null;
+  }
+
+  /**
+   * Saves user preferences directly into the database table (users/me/preferences).
+   */
+  async saveUserPreferences(prefs: { sound_enabled?: boolean; custom_instruction?: string }): Promise<UserPreferencesData | null> {
+    const token = this.accessToken;
+    if (!token) return null;
+
+    try {
+      const endpoint = this.configService.getFullUrl('/api/v1/users/me/preferences');
+      const res = await this.apiFetch(endpoint, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(prefs),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Fallback
+    }
+    return null;
   }
 
   async logout(): Promise<void> {

@@ -143,8 +143,8 @@ export class App {
   configService = inject(ConfigService);
   showAuthModal = signal(false);
   authMode = signal<'signin' | 'signup' | 'profile'>('signin');
-  // Only two sections: 'profile' and 'security'
-  activeProfileTab = signal<'profile' | 'security'>('profile');
+  // Settings sections: 'profile', 'preferences', and 'security'
+  activeProfileTab = signal<'profile' | 'preferences' | 'security'>('profile');
 
   // Profile Management & Edit Mode
   isEditingProfile = signal<boolean>(false);
@@ -165,6 +165,10 @@ export class App {
   soundEffectsEnabled = signal<boolean>(
     typeof localStorage !== 'undefined' ? localStorage.getItem('aivora_sound') !== 'false' : true
   );
+  customInstruction = signal<string>(
+    typeof localStorage !== 'undefined' ? localStorage.getItem('aivora_custom_instruction') || '' : ''
+  );
+  customInstructionFeedback = signal<string | null>(null);
   cacheClearedFeedback = signal<string | null>(null);
 
   // Active Chat Context
@@ -212,6 +216,14 @@ export class App {
         this.showAuthModal.set(true);
         // Clear event so subsequent UI tab clicks (e.g. Create Account) are free to change authMode
         this.authService.forcedLogoutEvent.set(null);
+      }
+    });
+
+    // Automatically load preferences from Database when user is authenticated
+    effect(() => {
+      const user = this.authService.currentUser();
+      if (user) {
+        this.loadPreferencesFromDb();
       }
     });
 
@@ -402,24 +414,98 @@ export class App {
     this.showUpdateModal.set(false);
   }
 
-  openProfileModal(tab?: 'profile' | 'security' | 'signin' | 'signup'): void {
+  openProfileModal(tab?: 'profile' | 'preferences' | 'security' | 'signin' | 'signup'): void {
     this.showAuthModal.set(true);
     this.profileValidationError.set(null);
     this.sessionsFeedbackMessage.set(null);
+    this.customInstructionFeedback.set(null);
     this.isEditingProfile.set(false);
 
     if (this.authService.isAuthenticated()) {
       this.authMode.set('profile');
-      this.activeProfileTab.set(tab === 'security' ? 'security' : 'profile');
+      if (tab === 'security') {
+        this.activeProfileTab.set('security');
+      } else if (tab === 'preferences') {
+        this.activeProfileTab.set('preferences');
+      } else {
+        this.activeProfileTab.set('profile');
+      }
       this.initProfileInputs();
-      this.loadUserLoginSessions();
+      if (tab === 'security') {
+        this.loadUserLoginSessions();
+      }
     } else {
       this.setAuthMode(tab === 'signup' ? 'signup' : 'signin');
     }
   }
 
   openSettingsModal(tab?: string): void {
-    this.openProfileModal(tab === 'security' ? 'security' : 'profile');
+    const target = tab === 'security' || tab === 'preferences' ? tab : 'preferences';
+    this.openProfileModal(target);
+  }
+
+  async loadPreferencesFromDb(): Promise<void> {
+    if (!this.authService.isAuthenticated()) return;
+    try {
+      const prefs = await this.authService.fetchUserPreferences();
+      if (prefs) {
+        if (typeof prefs.sound_enabled === 'boolean') {
+          this.soundEffectsEnabled.set(prefs.sound_enabled);
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('aivora_sound', String(prefs.sound_enabled));
+          }
+        }
+        if (typeof prefs.custom_instruction === 'string') {
+          this.customInstruction.set(prefs.custom_instruction);
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('aivora_custom_instruction', prefs.custom_instruction);
+          }
+        }
+      }
+    } catch {
+      // Ignored
+    }
+  }
+
+  async saveCustomInstruction(instructionText: string): Promise<void> {
+    const trimmed = (instructionText || '').trim();
+    this.customInstruction.set(trimmed);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('aivora_custom_instruction', trimmed);
+    }
+
+    if (this.authService.isAuthenticated()) {
+      await this.authService.saveUserPreferences({ custom_instruction: trimmed });
+    }
+
+    this.customInstructionFeedback.set('Custom instruction saved to database! Aivora will follow this in every answer.');
+    setTimeout(() => this.customInstructionFeedback.set(null), 3500);
+  }
+
+  async clearCustomInstruction(): Promise<void> {
+    this.customInstruction.set('');
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('aivora_custom_instruction');
+    }
+
+    if (this.authService.isAuthenticated()) {
+      await this.authService.saveUserPreferences({ custom_instruction: '' });
+    }
+
+    this.customInstructionFeedback.set('Custom instruction cleared from database. Restored default AI behavior.');
+    setTimeout(() => this.customInstructionFeedback.set(null), 3500);
+  }
+
+  async toggleSoundEffects(): Promise<void> {
+    const next = !this.soundEffectsEnabled();
+    this.soundEffectsEnabled.set(next);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('aivora_sound', String(next));
+    }
+
+    if (this.authService.isAuthenticated()) {
+      await this.authService.saveUserPreferences({ sound_enabled: next });
+    }
   }
 
   openAuthModal(initialMode?: 'signin' | 'signup' | 'profile', initialProfileTab?: any): void {
@@ -448,14 +534,6 @@ export class App {
       this.initProfileInputs();
     } else {
       this.profileValidationError.set(null);
-    }
-  }
-
-  toggleSoundEffects(): void {
-    const next = !this.soundEffectsEnabled();
-    this.soundEffectsEnabled.set(next);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('aivora_sound', String(next));
     }
   }
 
@@ -1277,6 +1355,8 @@ export class App {
       // Pass active session history in-memory directly to AI
       history: priorHistory,
       messages: priorHistory,
+      // User's custom instruction configured in Settings
+      custom_instruction: this.customInstruction().trim() || undefined,
     });
     const authHeaders = {
       Accept: 'text/event-stream, application/json',

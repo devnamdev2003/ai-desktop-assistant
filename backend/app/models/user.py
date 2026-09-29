@@ -27,3 +27,4 @@ class User(Base):
     # Relationships
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
+    preferences = relationship("UserPreference", back_populates="user", uselist=False, cascade="all, delete-orphan")

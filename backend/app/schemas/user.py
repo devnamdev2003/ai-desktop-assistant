@@ -40,6 +40,25 @@ class UserRead(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserPreferenceBase(BaseModel):
+    sound_enabled: bool = True
+    custom_instruction: Optional[str] = None
+
+
+class UserPreferenceUpdate(BaseModel):
+    sound_enabled: Optional[bool] = None
+    custom_instruction: Optional[str] = None
+
+
+class UserPreferenceRead(UserPreferenceBase):
+    id: str
+    user_id: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class GoogleAuthRequest(BaseModel):
     """Used when the frontend passes a Google ID token or authorization code directly."""
     id_token: Optional[str] = None

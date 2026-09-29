@@ -52,6 +52,8 @@ class ChatRequest(BaseModel):
     history: Optional[List[ChatHistoryItem]] = None
     messages: Optional[List[ChatHistoryItem]] = None
     save_to_db: Optional[bool] = False
+    custom_instruction: Optional[str] = None
+    system_instruction: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
