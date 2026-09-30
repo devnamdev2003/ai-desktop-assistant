@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
 
@@ -58,13 +59,14 @@ describe('App', () => {
     expect(async () => await app.quitApp()).not.toThrow();
   });
 
-  it('should show and hide orb context menu', () => {
+  it('should show and hide orb context menu', async () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
+    app.isExpanded = false;
     expect(app.showOrbContextMenu()).toBe(false);
-    app.onOrbContextMenu(new MouseEvent('contextmenu'));
+    await app.onOrbContextMenu(new MouseEvent('contextmenu'));
     expect(app.showOrbContextMenu()).toBe(true);
-    app.closeOrbContextMenu();
+    await app.closeOrbContextMenu();
     expect(app.showOrbContextMenu()).toBe(false);
   });
 
@@ -192,5 +194,79 @@ describe('App', () => {
     const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
     app.handleGlobalKeydown(escapeEvent);
     expect(app.showAuthModal()).toBe(false);
+  });
+
+  it('should accurately compute input word counts and word limits', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+
+    app.inputText.set('');
+    expect(app.inputWordCount()).toBe(0);
+    expect(app.isOverWordLimit()).toBe(false);
+    expect(app.remainingWords()).toBe(app.maxInputWords());
+
+    app.inputText.set('Hello world from the automated unit test suite');
+    expect(app.inputWordCount()).toBe(8);
+    expect(app.remainingWords()).toBe(app.maxInputWords() - 8);
+
+    // Test exceeding word limit
+    const longText = new Array(505).fill('word').join(' ');
+    app.inputText.set(longText);
+    expect(app.inputWordCount()).toBe(505);
+    expect(app.isOverWordLimit()).toBe(true);
+    expect(app.remainingWords()).toBeLessThan(0);
+  });
+
+  it('should toggle sound effects and persist custom instructions', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+
+    const initialSound = app.soundEffectsEnabled();
+    await app.toggleSoundEffects();
+    expect(app.soundEffectsEnabled()).toBe(!initialSound);
+
+    await app.saveCustomInstruction('Always respond in concise bullet points');
+    expect(app.customInstruction()).toBe('Always respond in concise bullet points');
+
+    await app.clearCustomInstruction();
+    expect(app.customInstruction()).toBe('');
+  });
+
+  it('should manage image attachment and preview modal state', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+
+    expect(app.attachedScreenshot()).toBeNull();
+    const fakeDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    
+    app.attachedScreenshot.set(fakeDataUrl);
+    expect(app.attachedScreenshot()).toBe(fakeDataUrl);
+
+    // Open image preview
+    app.previewImage(fakeDataUrl);
+    expect(app.previewModalImageUrl()).toBe(fakeDataUrl);
+
+    // Close preview modal
+    app.closeImagePreview();
+    expect(app.previewModalImageUrl()).toBeNull();
+
+    // Remove screenshot attachment
+    app.removeAttachedScreenshot();
+    expect(app.attachedScreenshot()).toBeNull();
+  });
+
+  it('should handle sessions drawer and active session title', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+
+    expect(app.showSessionDrawer()).toBe(false);
+    app.toggleSessionDrawer();
+    expect(app.showSessionDrawer()).toBe(true);
+    app.closeSessionDrawer();
+    expect(app.showSessionDrawer()).toBe(false);
+
+    expect(app.currentSessionTitle()).toBe('New Chat');
+    app.startNewSession();
+    expect(app.messages().length).toBe(0);
   });
 });
