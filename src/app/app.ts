@@ -106,6 +106,8 @@ marked.use({
     '(click)': 'handleGlobalClick($event)',
     '(contextmenu)': 'handleContextMenu($event)',
     '(document:keydown)': 'handleGlobalKeydown($event)',
+    '(window:blur)': 'handleWindowBlur()',
+    '(document:mousedown)': 'handleDocumentMouseDown($event)',
   },
 })
 export class App {
@@ -249,6 +251,12 @@ export class App {
       }
     });
 
+    if (typeof window !== 'undefined') {
+      window.addEventListener('blur', () => {
+        this.handleWindowBlur();
+      });
+    }
+
     if (typeof document !== 'undefined' && this.isTauriEnvironment()) {
       document.body.classList.add('is-tauri');
       // Ensure the taskbar icon is visible and always-on-top is enabled for the initial small/orb view
@@ -258,6 +266,13 @@ export class App {
         } catch { }
         try {
           await win.setAlwaysOnTop(true);
+        } catch { }
+        try {
+          await win.onFocusChanged(({ payload: focused }) => {
+            if (!focused && this.showOrbContextMenu()) {
+              this.closeOrbContextMenu();
+            }
+          });
         } catch { }
       });
     }
@@ -1735,6 +1750,13 @@ export class App {
   // -----------------------------
 
   startOrbInteraction(event: MouseEvent): void {
+    if (this.showOrbContextMenu()) {
+      this.closeOrbContextMenu();
+      this.suppressNextOrbClick = true;
+      event.stopPropagation();
+      return;
+    }
+
     if (event.button !== 0) {
       return;
     }
@@ -1783,11 +1805,30 @@ export class App {
   onOrbContextMenu(event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
+    if (this.showOrbContextMenu()) {
+      this.showOrbContextMenu.set(false);
+      return;
+    }
     this.showOrbContextMenu.set(true);
   }
 
   closeOrbContextMenu(): void {
     this.showOrbContextMenu.set(false);
+  }
+
+  handleWindowBlur(): void {
+    if (this.showOrbContextMenu()) {
+      this.closeOrbContextMenu();
+    }
+  }
+
+  handleDocumentMouseDown(event: MouseEvent): void {
+    if (this.showOrbContextMenu()) {
+      const target = event.target as HTMLElement;
+      if (!target?.closest('#orb-context-menu')) {
+        this.closeOrbContextMenu();
+      }
+    }
   }
 
   /**

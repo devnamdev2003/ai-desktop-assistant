@@ -51,9 +51,17 @@
 
     <!-- Right-Click Context Menu on Orb -->
     @if (showOrbContextMenu()) {
+    <!-- Full-screen transparent backdrop to capture any outside click/mousedown and dismiss menu -->
+    <div id="orb-context-menu-backdrop"
+      class="fixed inset-0 z-40 bg-transparent cursor-default"
+      (mousedown)="closeOrbContextMenu(); $event.stopPropagation()"
+      (click)="closeOrbContextMenu(); $event.stopPropagation()"
+      (contextmenu)="closeOrbContextMenu(); $event.preventDefault(); $event.stopPropagation()"></div>
+
     <div id="orb-context-menu"
       class="absolute z-50 flex flex-col rounded-xl border border-white/15 bg-slate-900/95 py-1 shadow-2xl backdrop-blur-md w-28 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[11px]"
-      (mousedown)="$event.stopPropagation()">
+      (mousedown)="$event.stopPropagation()"
+      (click)="$event.stopPropagation()">
       <button type="button" (click)="toggleAssistant(); closeOrbContextMenu()"
         class="flex items-center gap-1.5 px-2.5 py-1 text-white/80 hover:bg-purple-500/20 hover:text-white transition text-left cursor-pointer">
         <span class="h-1.5 w-1.5 rounded-full bg-purple-400"></span>
