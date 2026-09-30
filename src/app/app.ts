@@ -1338,6 +1338,38 @@ export class App {
     this.isCapturingScreen.set(true);
     this.errorMessage.set(null);
 
+    // 1. NATIVE TAURI DESKTOP SCREENSHOT (0 clicks, 0 dialogs, instant)
+    // Directly captures the screen using native OS graphics API via Rust Tauri command
+    if (this.isTauriEnvironment()) {
+      try {
+        // Briefly fade the Aivora window to transparent so Aivora doesn't capture itself
+        this.isHidingForCapture.set(true);
+        // Wait 120ms for OS compositor to render the desktop behind the transparent window
+        await new Promise<void>((resolve) => setTimeout(resolve, 120));
+
+        const { invoke } = await import('@tauri-apps/api/core');
+        const base64Data = await invoke<string>('capture_screen');
+
+        this.attachedScreenshot.set(base64Data);
+        if (!this.inputText().trim()) {
+          this.inputText.set('What is on my screen?');
+        }
+        setTimeout(() => this.chatInputElement?.nativeElement?.focus(), 80);
+        return;
+      } catch (tauriErr) {
+        console.error('Native Tauri capture error:', tauriErr);
+        const errStr = tauriErr instanceof Error ? tauriErr.message : String(tauriErr);
+        this.errorMessage.set(
+          `Desktop screen capture: Please restart your terminal with 'npx tauri dev' to compile the native screen capture binary. (${errStr})`
+        );
+        return; // NEVER fall back to browser getDisplayMedia dialog in desktop app!
+      } finally {
+        this.isHidingForCapture.set(false);
+        this.isCapturingScreen.set(false);
+      }
+    }
+
+    // 2. WEB BROWSER FALLBACK (only when previewing in standard browser without Tauri desktop)
     let stream: MediaStream | null = null;
     let video: HTMLVideoElement | null = null;
 
