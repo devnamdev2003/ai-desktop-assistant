@@ -47,6 +47,7 @@ class ChatHistoryItem(BaseModel):
 
 class ChatRequest(BaseModel):
     question: str
+    image: Optional[str] = None
     conversation_id: Optional[int] = None
     stream: Optional[bool] = True
     history: Optional[List[ChatHistoryItem]] = None

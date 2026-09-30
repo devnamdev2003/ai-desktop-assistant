@@ -19,6 +19,7 @@ export interface ChatMessage {
   id: string;
   sender: 'user' | 'assistant';
   text: string;
+  imageUrl?: string;
   formattedText?: SafeHtml | string;
   isStreaming?: boolean;
   timestamp: Date;
@@ -226,6 +227,11 @@ export class App {
   remainingWords = computed(() => {
     return this.maxInputWords() - this.inputWordCount();
   });
+
+  // Screen capture & Image attachment state
+  isCapturingScreen = signal<boolean>(false);
+  attachedScreenshot = signal<string | null>(null);
+  previewModalImageUrl = signal<string | null>(null);
 
   constructor() {
     // Universal listener for auth forced-logout events from the global API validator
@@ -1320,7 +1326,150 @@ export class App {
     this.messages.set([]);
     this.errorMessage.set(null);
     this.inputText.set('');
+    this.attachedScreenshot.set(null);
     setTimeout(() => this.chatInputElement?.nativeElement?.focus(), 50);
+  }
+
+  // --- Screen Capture & Image Attachment ---
+
+  async takeScreenshot(): Promise<void> {
+    if (this.isCapturingScreen()) return;
+    this.isCapturingScreen.set(true);
+    this.errorMessage.set(null);
+
+    // Make window contents 100% transparent so Aivora is excluded from the desktop screen capture
+    // (Never call win.hide() or win.minimize() on the native window as that suspends WebView2 execution on Windows)
+    if (typeof document !== 'undefined') {
+      document.body.style.opacity = '0';
+    }
+
+    try {
+      if (!navigator.mediaDevices?.getDisplayMedia) {
+        throw new Error('Screen capture is not supported in this environment.');
+      }
+
+      // 1. Request screen stream from OS / browser display media
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          displaySurface: 'monitor',
+        },
+        audio: false,
+        // @ts-expect-error selfBrowserSurface is supported in Chromium
+        selfBrowserSurface: 'exclude',
+        preferCurrentTab: false,
+      });
+
+      // Ensure transparent appearance is painted by browser compositor
+      if (typeof document !== 'undefined') {
+        document.body.style.opacity = '0';
+      }
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          setTimeout(() => resolve(), 100);
+        });
+      });
+
+      // 2. Play stream into video element to render the clean desktop frame
+      const video = document.createElement('video');
+      video.autoplay = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.srcObject = stream;
+
+      await new Promise<void>((resolve, reject) => {
+        video.onloadedmetadata = () => {
+          video.play().then(() => resolve()).catch(reject);
+        };
+        video.onerror = () => reject(new Error('Failed to play screen video stream'));
+        setTimeout(() => resolve(), 1000);
+      });
+
+      // Brief tick to ensure frame rendering
+      await new Promise<void>((resolve) => setTimeout(resolve, 60));
+
+      // 3. Draw to canvas
+      const width = video.videoWidth || 1920;
+      const height = video.videoHeight || 1080;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Failed to create canvas context for screenshot');
+      }
+      ctx.drawImage(video, 0, 0, width, height);
+
+      // Stop all screen capture tracks immediately so no recording indicator remains
+      stream.getTracks().forEach((track) => track.stop());
+      video.srcObject = null;
+
+      // 4. Restore window visibility
+      if (typeof document !== 'undefined') {
+        document.body.style.opacity = '1';
+      }
+
+      // Convert to compressed jpeg base64 data URL
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      this.attachedScreenshot.set(dataUrl);
+
+      // If input text is empty, suggest asking about the screen
+      if (!this.inputText().trim()) {
+        this.inputText.set('What is on my screen?');
+      }
+      setTimeout(() => this.chatInputElement?.nativeElement?.focus(), 100);
+    } catch (err: unknown) {
+      if (typeof document !== 'undefined') {
+        document.body.style.opacity = '1';
+      }
+
+      const errName = (err as { name?: string })?.name;
+      if (errName === 'NotAllowedError' || errName === 'AbortError') {
+        // User cancelled the screen capture prompt
+        return;
+      }
+      const message = err instanceof Error ? err.message : 'Could not take screenshot';
+      console.warn('Screenshot error:', err);
+      this.errorMessage.set(`Screenshot failed: ${message}`);
+    } finally {
+      if (typeof document !== 'undefined') {
+        document.body.style.opacity = '1';
+      }
+      this.isCapturingScreen.set(false);
+    }
+  }
+
+  removeAttachedScreenshot(): void {
+    this.attachedScreenshot.set(null);
+  }
+
+  previewImage(url: string): void {
+    this.previewModalImageUrl.set(url);
+  }
+
+  closeImagePreview(): void {
+    this.previewModalImageUrl.set(null);
+  }
+
+  onChatPaste(event: ClipboardEvent): void {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile();
+        if (file) {
+          event.preventDefault();
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const result = e.target?.result as string;
+            if (result) {
+              this.attachedScreenshot.set(result);
+            }
+          };
+          reader.readAsDataURL(file);
+          break;
+        }
+      }
+    }
   }
 
   cancelStreaming(): void {
@@ -1366,12 +1515,14 @@ export class App {
       return;
     }
 
+    const screenshotData = this.attachedScreenshot();
     const questionText = (customText ?? this.inputText()).trim();
-    if (!questionText || this.isLoading()) {
+    const effectiveQuestion = questionText || (screenshotData ? 'Please analyze what is on my screen.' : '');
+    if (!effectiveQuestion || this.isLoading()) {
       return;
     }
 
-    const wordsCount = questionText.split(/\s+/).filter(Boolean).length;
+    const wordsCount = effectiveQuestion.split(/\s+/).filter(Boolean).length;
     if (wordsCount > this.maxInputWords()) {
       this.errorMessage.set(
         `Message exceeds the limit of ${this.maxInputWords()} words (current: ${wordsCount} words). Please shorten your message to save credits.`
@@ -1382,12 +1533,14 @@ export class App {
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: 'user',
-      text: questionText,
+      text: effectiveQuestion,
+      imageUrl: screenshotData || undefined,
       timestamp: new Date(),
     };
 
     this.messages.update((list) => [...list, userMessage]);
     this.inputText.set('');
+    this.attachedScreenshot.set(null);
     if (this.chatInputElement?.nativeElement) {
       this.chatInputElement.nativeElement.value = '';
       this.chatInputElement.nativeElement.style.height = 'auto';
@@ -1407,7 +1560,7 @@ export class App {
     };
 
     try {
-      await this.streamAiResponse(questionText, assistantId, initialAssistantMessage);
+      await this.streamAiResponse(effectiveQuestion, assistantId, initialAssistantMessage, screenshotData);
     } catch (err: unknown) {
       if ((err as { name?: string })?.name === 'AbortError') {
         return;
@@ -1456,7 +1609,8 @@ export class App {
   private async streamAiResponse(
     question: string,
     assistantId: string,
-    initialAssistantMessage: ChatMessage
+    initialAssistantMessage: ChatMessage,
+    image?: string | null
   ): Promise<void> {
     this.activeAbortController = new AbortController();
 
@@ -1475,6 +1629,7 @@ export class App {
     const payload = JSON.stringify({
       question,
       stream: true,
+      image: image || undefined,
       // Pass active session history in-memory directly to AI
       history: priorHistory,
       messages: priorHistory,
@@ -1528,7 +1683,7 @@ export class App {
       // Session expired: attempt automatic refresh once
       const refreshed = await this.authService.refreshSession();
       if (refreshed) {
-        return this.streamAiResponse(question, assistantId, initialAssistantMessage);
+        return this.streamAiResponse(question, assistantId, initialAssistantMessage, image);
       }
 
       this.forceLogoutWithNotice('Your session has expired. Please sign in again.');
@@ -1802,18 +1957,42 @@ export class App {
     this.toggleAssistant();
   }
 
-  onOrbContextMenu(event: MouseEvent): void {
+  async onOrbContextMenu(event: MouseEvent): Promise<void> {
     event.preventDefault();
     event.stopPropagation();
     if (this.showOrbContextMenu()) {
-      this.showOrbContextMenu.set(false);
+      await this.closeOrbContextMenu();
       return;
     }
+    await this.safeWindowOp(async (win) => {
+      try {
+        await win.setSize(new LogicalSize(190, 190));
+      } catch { }
+    });
     this.showOrbContextMenu.set(true);
   }
 
-  closeOrbContextMenu(): void {
+  async closeOrbContextMenu(): Promise<void> {
     this.showOrbContextMenu.set(false);
+    if (!this.isExpanded) {
+      await this.safeWindowOp(async (win) => {
+        try {
+          await win.setSize(new LogicalSize(120, 120));
+        } catch { }
+      });
+    }
+  }
+
+  async takeScreenshotFromOrb(): Promise<void> {
+    await this.closeOrbContextMenu();
+    const wasCollapsed = !this.isExpanded;
+    try {
+      await this.takeScreenshot();
+    } finally {
+      if (wasCollapsed && !this.isExpanded && this.attachedScreenshot()) {
+        await this.toggleAssistant();
+      }
+    }
   }
 
   handleWindowBlur(): void {
@@ -1883,7 +2062,19 @@ export class App {
       return;
     }
 
-    // 3. Block accidental webpage save (Ctrl+S / Cmd+S)
+    // Shortcut: Ctrl+Shift+S / Cmd+Shift+S or PrintScreen: Take Screenshot & attach to chat
+    if ((isCtrlOrCmd && event.shiftKey && (key === 's' || key === 'S')) || key === 'PrintScreen') {
+      event.preventDefault();
+      const wasCollapsed = !this.isExpanded;
+      this.takeScreenshot().then(() => {
+        if (wasCollapsed && !this.isExpanded && this.attachedScreenshot()) {
+          this.toggleAssistant();
+        }
+      });
+      return;
+    }
+
+    // 3. Block accidental webpage save (Ctrl+S / Cmd+S without shift)
     if (isCtrlOrCmd && (key === 's' || key === 'S')) {
       event.preventDefault();
       return;
@@ -1935,6 +2126,11 @@ export class App {
 
     // Escape: dismiss modal, close session drawer, or cancel active voice/search
     if (key === 'Escape') {
+      if (this.previewModalImageUrl()) {
+        this.closeImagePreview();
+        event.preventDefault();
+        return;
+      }
       if (this.showAuthModal()) {
         this.closeAuthModal();
         event.preventDefault();

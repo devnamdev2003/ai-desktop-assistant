@@ -1,4 +1,6 @@
-<div class="h-screen w-screen select-none"
+<div class="h-screen w-screen select-none transition-opacity duration-75"
+  [class.opacity-0]="isCapturingScreen()"
+  [class.pointer-events-none]="isCapturingScreen()"
   [class]="isMaximized() && isExpanded ? 'flex flex-col' : 'flex items-center justify-center'">
 
   <!-- ========================= -->
@@ -59,28 +61,50 @@
       (contextmenu)="closeOrbContextMenu(); $event.preventDefault(); $event.stopPropagation()"></div>
 
     <div id="orb-context-menu"
-      class="absolute z-50 flex flex-col rounded-xl border border-white/15 bg-slate-900/95 py-1 shadow-2xl backdrop-blur-md w-28 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[11px]"
+      class="absolute z-50 flex flex-col rounded-xl border border-white/15 bg-slate-900/95 py-1.5 shadow-2xl backdrop-blur-md w-40 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[11px]"
       (mousedown)="$event.stopPropagation()"
       (click)="$event.stopPropagation()">
+      <!-- 1. Open Aivora -->
       <button type="button" (click)="toggleAssistant(); closeOrbContextMenu()"
-        class="flex items-center gap-1.5 px-2.5 py-1 text-white/80 hover:bg-purple-500/20 hover:text-white transition text-left cursor-pointer">
+        class="flex items-center gap-2 px-3 py-1.5 text-white/80 hover:bg-purple-500/20 hover:text-white transition text-left cursor-pointer">
         <span class="h-1.5 w-1.5 rounded-full bg-purple-400"></span>
-        <span>Open Aivora</span>
+        <span class="font-medium">Open Aivora</span>
       </button>
+
+      <!-- 2. Take Screenshot & Ask AI -->
+      <button type="button" (click)="takeScreenshotFromOrb()"
+        class="flex items-center justify-between gap-1.5 px-3 py-1.5 text-white/80 hover:bg-purple-500/20 hover:text-white transition text-left cursor-pointer group">
+        <div class="flex items-center gap-2 min-w-0">
+          <svg class="h-3.5 w-3.5 text-purple-400 group-hover:text-purple-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span class="font-medium truncate">Take Screenshot</span>
+        </div>
+        <kbd class="text-[8px] bg-white/10 group-hover:bg-purple-500/40 px-1 py-0.5 rounded font-mono text-white/45 group-hover:text-purple-200 shrink-0">
+          Ctrl+Shift+S
+        </kbd>
+      </button>
+
+      <!-- 3. Minimize -->
       <button type="button" (click)="minimizeToTaskbar(); closeOrbContextMenu()"
-        class="flex items-center gap-1.5 px-2.5 py-1 text-white/80 hover:bg-white/10 hover:text-white transition text-left cursor-pointer">
-        <svg class="h-2.5 w-2.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        class="flex items-center gap-2 px-3 py-1.5 text-white/80 hover:bg-white/10 hover:text-white transition text-left cursor-pointer">
+        <svg class="h-3 w-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 13H5" />
         </svg>
-        <span>Minimize</span>
+        <span class="font-medium">Minimize</span>
       </button>
-      <div class="my-0.5 h-px bg-white/10"></div>
+
+      <div class="my-1 h-px bg-white/10"></div>
+
+      <!-- 4. Quit -->
       <button type="button" (click)="quitApp($event)"
-        class="flex items-center gap-1.5 px-2.5 py-1 text-red-300 hover:bg-red-500/25 hover:text-red-200 transition text-left cursor-pointer">
-        <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        class="flex items-center gap-2 px-3 py-1.5 text-red-300 hover:bg-red-500/25 hover:text-red-200 transition text-left cursor-pointer">
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
-        <span>Quit</span>
+        <span class="font-medium">Quit</span>
       </button>
     </div>
     }
@@ -154,6 +178,26 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
+          }
+        </button>
+
+        <!-- TAKE SCREENSHOT BUTTON -->
+        <button id="header-screenshot-btn" type="button" (mousedown)="$event.stopPropagation()"
+          (click)="takeScreenshot()"
+          [disabled]="isCapturingScreen() || isLoading()"
+          title="Take screenshot to ask AI about your screen (Ctrl+Shift+S)" aria-label="Take screenshot (Ctrl+Shift+S)"
+          class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 text-purple-300 hover:bg-purple-600/30 hover:text-white transition cursor-pointer disabled:opacity-40">
+          @if (isCapturingScreen()) {
+          <svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          } @else {
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
           }
         </button>
 
@@ -380,6 +424,15 @@
           <div class="flex justify-end group">
             <div class="relative rounded-2xl rounded-tr-sm bg-gradient-to-br from-purple-600 to-indigo-700 text-white shadow-lg border border-purple-400/20"
               [class]="isMaximized() ? 'max-w-[75%] px-5 py-3.5 text-sm' : 'max-w-[85%] px-4 py-2.5 text-sm'">
+              <!-- Attached Screenshot if present -->
+              @if (msg.imageUrl) {
+              <div class="mb-2.5">
+                <img [src]="msg.imageUrl" alt="Screenshot" (click)="previewImage(msg.imageUrl!)"
+                  class="max-h-56 max-w-full rounded-xl object-contain border border-white/25 shadow-md cursor-pointer hover:opacity-90 transition bg-black/40"
+                  title="Click to view full image" />
+              </div>
+              }
+
               <!-- User Message Content (truncated or full based on minimize/maximize state) -->
               <p class="whitespace-pre-wrap leading-relaxed break-words">{{ getUserMessageDisplayText(msg) }}</p>
 
@@ -527,17 +580,66 @@
         </div>
         }
 
+        <!-- Attached Screenshot Thumbnail Card -->
+        @if (attachedScreenshot()) {
+        <div class="mb-2.5 flex items-center justify-between rounded-xl border border-purple-500/35 bg-purple-500/15 p-2 shadow-lg backdrop-blur-md">
+          <div class="flex items-center gap-3 min-w-0">
+            <img [src]="attachedScreenshot()" alt="Screen capture"
+              class="h-11 w-18 object-cover rounded-lg border border-purple-400/40 shadow shrink-0 cursor-pointer hover:opacity-90 transition bg-black/40"
+              (click)="previewImage(attachedScreenshot()!)"
+              title="Click to zoom in" />
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="font-semibold text-xs text-white truncate">Screen Capture Attached</span>
+              </div>
+              <p class="text-[10px] text-purple-200/70 truncate mt-0.5">
+                Type your question or hit send to ask about this screenshot
+              </p>
+            </div>
+          </div>
+          <button type="button" (click)="removeAttachedScreenshot()"
+            title="Remove screenshot" aria-label="Remove screenshot"
+            class="flex h-6 w-6 items-center justify-center rounded-lg text-white/50 hover:bg-white/10 hover:text-white transition cursor-pointer shrink-0">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        }
+
         <!-- Clean Multiline Input Box supporting Shift+Enter to break line and Enter to send -->
-        <div class="relative flex items-end gap-2.5 rounded-2xl border bg-white/5 p-2.5 shadow-lg transition-colors focus-within:bg-white/[0.08]"
+        <div class="relative flex items-end gap-2 rounded-2xl border bg-white/5 p-2.5 shadow-lg transition-colors focus-within:bg-white/[0.08]"
           [class]="isOverWordLimit() ? 'border-rose-500/60 focus-within:border-rose-500' : 'border-white/10 focus-within:border-white/25'">
           
+          <!-- Quick Screenshot / Screen Capture Button in Input Box -->
+          <button id="input-screenshot-btn" type="button" (click)="takeScreenshot()"
+            [disabled]="isCapturingScreen() || isLoading()"
+            [title]="attachedScreenshot() ? 'Retake screenshot of screen (Ctrl+Shift+S)' : 'Take screenshot of screen (Ctrl+Shift+S)'"
+            [attr.aria-label]="'Take screenshot (Ctrl+Shift+S)'"
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-purple-300 hover:text-white hover:bg-white/10 transition cursor-pointer disabled:opacity-40 mb-0.5">
+            @if (isCapturingScreen()) {
+            <svg class="h-4 w-4 animate-spin text-purple-400" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            } @else {
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            }
+          </button>
+
           <!-- Textarea (Auto-growing, multiline, Shift+Enter for new line, Enter to send) -->
           <textarea #chatInput id="aivora-chat-input"
             [value]="inputText()"
             (input)="onInputChange($event)"
             (keydown)="onChatKeyDown($event)"
+            (paste)="onChatPaste($event)"
             [disabled]="isLoading()"
-            placeholder="Ask Aivora..."
+            placeholder="Ask Aivora or ask about your screen..."
             rows="1"
             class="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35 resize-none px-2 py-1 leading-relaxed selection:bg-purple-600/40 no-scrollbar overflow-y-auto"
             [style.minHeight]="'26px'"
@@ -545,7 +647,7 @@
 
           <!-- Send / Stop Button -->
           <button id="aivora-send-button" type="button" (click)="sendMessage()"
-            [disabled]="isLoading() || isOverWordLimit() || (!inputText().trim() && !isStreamingActive())"
+            [disabled]="isLoading() || isOverWordLimit() || (!inputText().trim() && !attachedScreenshot() && !isStreamingActive())"
             [title]="isStreamingActive() ? 'Stop response' : (isOverWordLimit() ? 'Word limit exceeded (' + inputWordCount() + '/' + maxInputWords() + ' words)' : 'Send message (Enter)')"
             [attr.aria-label]="isStreamingActive() ? 'Stop response' : 'Send message'"
             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-purple-600 text-white transition hover:bg-purple-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-purple-600 cursor-pointer shadow-md mb-0.5"
@@ -1282,6 +1384,27 @@
 
       </div>
 
+    </div>
+  </div>
+  }
+
+  <!-- ========================= -->
+  <!-- IMAGE PREVIEW MODAL -->
+  <!-- ========================= -->
+  @if (previewModalImageUrl()) {
+  <div id="aivora-image-preview-modal-backdrop"
+    class="fixed inset-0 z-[150] flex items-center justify-center bg-black/85 backdrop-blur-md p-4"
+    (click)="closeImagePreview()">
+    <div class="relative max-w-4xl max-h-[85vh] flex flex-col items-center justify-center"
+      (click)="$event.stopPropagation()">
+      <button type="button" (click)="closeImagePreview()" aria-label="Close image preview"
+        class="absolute -top-10 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition cursor-pointer">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <img [src]="previewModalImageUrl()" alt="Full Preview"
+        class="max-w-full max-h-[80vh] rounded-2xl object-contain border border-white/20 shadow-2xl bg-black/50" />
     </div>
   </div>
   }
