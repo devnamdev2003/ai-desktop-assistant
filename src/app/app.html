@@ -1,6 +1,6 @@
 <div class="h-screen w-screen select-none transition-opacity duration-75"
-  [class.opacity-0]="isCapturingScreen()"
-  [class.pointer-events-none]="isCapturingScreen()"
+  [class.opacity-0]="isHidingForCapture()"
+  [class.pointer-events-none]="isHidingForCapture()"
   [class]="isMaximized() && isExpanded ? 'flex flex-col' : 'flex items-center justify-center'">
 
   <!-- ========================= -->
@@ -61,7 +61,7 @@
       (contextmenu)="closeOrbContextMenu(); $event.preventDefault(); $event.stopPropagation()"></div>
 
     <div id="orb-context-menu"
-      class="absolute z-50 flex flex-col rounded-xl border border-white/15 bg-slate-900/95 py-1.5 shadow-2xl backdrop-blur-md w-40 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[11px]"
+      class="absolute z-50 flex flex-col rounded-xl border border-white/15 bg-slate-900/95 py-1.5 shadow-2xl backdrop-blur-md w-32 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[11px]"
       (mousedown)="$event.stopPropagation()"
       (click)="$event.stopPropagation()">
       <!-- 1. Open Aivora -->
@@ -71,23 +71,7 @@
         <span class="font-medium">Open Aivora</span>
       </button>
 
-      <!-- 2. Take Screenshot & Ask AI -->
-      <button type="button" (click)="takeScreenshotFromOrb()"
-        class="flex items-center justify-between gap-1.5 px-3 py-1.5 text-white/80 hover:bg-purple-500/20 hover:text-white transition text-left cursor-pointer group">
-        <div class="flex items-center gap-2 min-w-0">
-          <svg class="h-3.5 w-3.5 text-purple-400 group-hover:text-purple-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span class="font-medium truncate">Take Screenshot</span>
-        </div>
-        <kbd class="text-[8px] bg-white/10 group-hover:bg-purple-500/40 px-1 py-0.5 rounded font-mono text-white/45 group-hover:text-purple-200 shrink-0">
-          Ctrl+Shift+S
-        </kbd>
-      </button>
-
-      <!-- 3. Minimize -->
+      <!-- 2. Minimize -->
       <button type="button" (click)="minimizeToTaskbar(); closeOrbContextMenu()"
         class="flex items-center gap-2 px-3 py-1.5 text-white/80 hover:bg-white/10 hover:text-white transition text-left cursor-pointer">
         <svg class="h-3 w-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -98,7 +82,7 @@
 
       <div class="my-1 h-px bg-white/10"></div>
 
-      <!-- 4. Quit -->
+      <!-- 3. Quit -->
       <button type="button" (click)="quitApp($event)"
         class="flex items-center gap-2 px-3 py-1.5 text-red-300 hover:bg-red-500/25 hover:text-red-200 transition text-left cursor-pointer">
         <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -185,7 +169,7 @@
         <button id="header-screenshot-btn" type="button" (mousedown)="$event.stopPropagation()"
           (click)="takeScreenshot()"
           [disabled]="isCapturingScreen() || isLoading()"
-          title="Take screenshot to ask AI about your screen (Ctrl+Shift+S)" aria-label="Take screenshot (Ctrl+Shift+S)"
+          title="Take screenshot to ask AI about your screen" aria-label="Take screenshot"
           class="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 text-purple-300 hover:bg-purple-600/30 hover:text-white transition cursor-pointer disabled:opacity-40">
           @if (isCapturingScreen()) {
           <svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -615,8 +599,8 @@
           <!-- Quick Screenshot / Screen Capture Button in Input Box -->
           <button id="input-screenshot-btn" type="button" (click)="takeScreenshot()"
             [disabled]="isCapturingScreen() || isLoading()"
-            [title]="attachedScreenshot() ? 'Retake screenshot of screen (Ctrl+Shift+S)' : 'Take screenshot of screen (Ctrl+Shift+S)'"
-            [attr.aria-label]="'Take screenshot (Ctrl+Shift+S)'"
+            [title]="attachedScreenshot() ? 'Retake screenshot of screen' : 'Take screenshot of screen'"
+            [attr.aria-label]="'Take screenshot'"
             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-purple-300 hover:text-white hover:bg-white/10 transition cursor-pointer disabled:opacity-40 mb-0.5">
             @if (isCapturingScreen()) {
             <svg class="h-4 w-4 animate-spin text-purple-400" fill="none" viewBox="0 0 24 24">

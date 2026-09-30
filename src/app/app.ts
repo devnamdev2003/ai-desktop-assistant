@@ -230,6 +230,7 @@ export class App {
 
   // Screen capture & Image attachment state
   isCapturingScreen = signal<boolean>(false);
+  isHidingForCapture = signal<boolean>(false);
   attachedScreenshot = signal<string | null>(null);
   previewModalImageUrl = signal<string | null>(null);
 
@@ -1337,19 +1338,17 @@ export class App {
     this.isCapturingScreen.set(true);
     this.errorMessage.set(null);
 
-    // Make window contents 100% transparent so Aivora is excluded from the desktop screen capture
-    // (Never call win.hide() or win.minimize() on the native window as that suspends WebView2 execution on Windows)
-    if (typeof document !== 'undefined') {
-      document.body.style.opacity = '0';
-    }
+    let stream: MediaStream | null = null;
+    let video: HTMLVideoElement | null = null;
 
     try {
       if (!navigator.mediaDevices?.getDisplayMedia) {
         throw new Error('Screen capture is not supported in this environment.');
       }
 
-      // 1. Request screen stream from OS / browser display media
-      const stream = await navigator.mediaDevices.getDisplayMedia({
+      // 1. Request screen stream from OS / browser display media.
+      // (The app stays completely visible and responsive while user selects the screen!)
+      stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
           displaySurface: 'monitor',
         },
@@ -1359,35 +1358,36 @@ export class App {
         preferCurrentTab: false,
       });
 
-      // Ensure transparent appearance is painted by browser compositor
-      if (typeof document !== 'undefined') {
-        document.body.style.opacity = '0';
-      }
+      // 2. NOW hide Aivora for a split second so neither the chat panel nor orb appears in the screenshot
+      this.isHidingForCapture.set(true);
+
+      // Give browser/compositor ~120ms to repaint the desktop region under the transparent window
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => {
-          setTimeout(() => resolve(), 100);
+          setTimeout(() => resolve(), 120);
         });
       });
 
-      // 2. Play stream into video element to render the clean desktop frame
-      const video = document.createElement('video');
+      // 3. Play stream into video element to render the clean desktop frame
+      video = document.createElement('video');
       video.autoplay = true;
       video.muted = true;
       video.playsInline = true;
       video.srcObject = stream;
 
       await new Promise<void>((resolve, reject) => {
+        if (!video) return resolve();
         video.onloadedmetadata = () => {
-          video.play().then(() => resolve()).catch(reject);
+          video?.play().then(() => resolve()).catch(reject);
         };
         video.onerror = () => reject(new Error('Failed to play screen video stream'));
         setTimeout(() => resolve(), 1000);
       });
 
-      // Brief tick to ensure frame rendering
-      await new Promise<void>((resolve) => setTimeout(resolve, 60));
+      // Brief tick to ensure the clean frame without Aivora is fully rendered
+      await new Promise<void>((resolve) => setTimeout(resolve, 80));
 
-      // 3. Draw to canvas
+      // 4. Draw to canvas
       const width = video.videoWidth || 1920;
       const height = video.videoHeight || 1080;
       const canvas = document.createElement('canvas');
@@ -1401,12 +1401,12 @@ export class App {
 
       // Stop all screen capture tracks immediately so no recording indicator remains
       stream.getTracks().forEach((track) => track.stop());
+      stream = null;
       video.srcObject = null;
+      video = null;
 
-      // 4. Restore window visibility
-      if (typeof document !== 'undefined') {
-        document.body.style.opacity = '1';
-      }
+      // 5. Restore window visibility immediately
+      this.isHidingForCapture.set(false);
 
       // Convert to compressed jpeg base64 data URL
       const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
@@ -1418,9 +1418,12 @@ export class App {
       }
       setTimeout(() => this.chatInputElement?.nativeElement?.focus(), 100);
     } catch (err: unknown) {
-      if (typeof document !== 'undefined') {
-        document.body.style.opacity = '1';
+      if (stream) {
+        try {
+          stream.getTracks().forEach((track) => track.stop());
+        } catch { }
       }
+      this.isHidingForCapture.set(false);
 
       const errName = (err as { name?: string })?.name;
       if (errName === 'NotAllowedError' || errName === 'AbortError') {
@@ -1431,9 +1434,7 @@ export class App {
       console.warn('Screenshot error:', err);
       this.errorMessage.set(`Screenshot failed: ${message}`);
     } finally {
-      if (typeof document !== 'undefined') {
-        document.body.style.opacity = '1';
-      }
+      this.isHidingForCapture.set(false);
       this.isCapturingScreen.set(false);
     }
   }
@@ -1966,7 +1967,7 @@ export class App {
     }
     await this.safeWindowOp(async (win) => {
       try {
-        await win.setSize(new LogicalSize(190, 190));
+        await win.setSize(new LogicalSize(150, 150));
       } catch { }
     });
     this.showOrbContextMenu.set(true);
@@ -1980,18 +1981,6 @@ export class App {
           await win.setSize(new LogicalSize(120, 120));
         } catch { }
       });
-    }
-  }
-
-  async takeScreenshotFromOrb(): Promise<void> {
-    await this.closeOrbContextMenu();
-    const wasCollapsed = !this.isExpanded;
-    try {
-      await this.takeScreenshot();
-    } finally {
-      if (wasCollapsed && !this.isExpanded && this.attachedScreenshot()) {
-        await this.toggleAssistant();
-      }
     }
   }
 
@@ -2062,19 +2051,7 @@ export class App {
       return;
     }
 
-    // Shortcut: Ctrl+Shift+S / Cmd+Shift+S or PrintScreen: Take Screenshot & attach to chat
-    if ((isCtrlOrCmd && event.shiftKey && (key === 's' || key === 'S')) || key === 'PrintScreen') {
-      event.preventDefault();
-      const wasCollapsed = !this.isExpanded;
-      this.takeScreenshot().then(() => {
-        if (wasCollapsed && !this.isExpanded && this.attachedScreenshot()) {
-          this.toggleAssistant();
-        }
-      });
-      return;
-    }
-
-    // 3. Block accidental webpage save (Ctrl+S / Cmd+S without shift)
+    // 3. Block accidental webpage save (Ctrl+S / Cmd+S)
     if (isCtrlOrCmd && (key === 's' || key === 'S')) {
       event.preventDefault();
       return;
