@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
+import { ImageEditor } from './components/image-editor';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -268,5 +269,84 @@ describe('App', () => {
     expect(app.currentSessionTitle()).toBe('New Chat');
     app.startNewSession();
     expect(app.messages().length).toBe(0);
+  });
+
+  it('should manage screenshot editor modal, annotations, and save/cancel flow', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+
+    const fakeScreenshot = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP...';
+    expect(app.isEditingScreenshot()).toBe(false);
+    expect(app.screenshotEditorImage()).toBeNull();
+    expect(app.isMaximized()).toBe(false);
+
+    // Open editor (which automatically maximizes the app screen)
+    await app.openScreenshotEditor(fakeScreenshot);
+    expect(app.isEditingScreenshot()).toBe(true);
+    expect(app.screenshotEditorImage()).toBe(fakeScreenshot);
+    expect(app.isMaximized()).toBe(true);
+
+    // Cancel editor
+    app.onCancelScreenshotEditor();
+    expect(app.isEditingScreenshot()).toBe(false);
+    expect(app.screenshotEditorImage()).toBeNull();
+
+    // Save edited screenshot with highlight boxes
+    const fakeEditedScreenshot = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/EDITED...';
+    await app.openScreenshotEditor(fakeScreenshot);
+    app.onSaveEditedScreenshot(fakeEditedScreenshot);
+
+    expect(app.isEditingScreenshot()).toBe(false);
+    expect(app.attachedScreenshot()).toBe(fakeEditedScreenshot);
+    expect(app.inputText()).toContain('highlighted box');
+
+    // Re-edit currently attached screenshot
+    await app.editAttachedScreenshot();
+    expect(app.isEditingScreenshot()).toBe(true);
+    expect(app.screenshotEditorImage()).toBe(fakeEditedScreenshot);
+    expect(app.isMaximized()).toBe(true);
+  });
+
+  it('should support cropping, undoing crop, and redoing crop in ImageEditor', () => {
+    const editorFixture = TestBed.createComponent(ImageEditor);
+    const editor = editorFixture.componentInstance;
+
+    editorFixture.componentRef.setInput('imageUrl', 'data:image/jpeg;base64,ORIGINAL');
+    editorFixture.detectChanges();
+
+    expect(editor.currentImageSrc()).toBe('data:image/jpeg;base64,ORIGINAL');
+    expect(editor.activeMode()).toBe('box');
+
+    // Switch to crop mode
+    editor.setMode('crop');
+    expect(editor.activeMode()).toBe('crop');
+
+    // Set a crop selection
+    editor.cropSelection.set({ x: 10, y: 10, w: 200, h: 200 });
+
+    // Mock baseImageElement
+    (editor as any).baseImageElement = { width: 400, height: 400 };
+
+    // Apply Crop
+    editor.applyCrop();
+
+    // Verify undoStack has previous image and currentImageSrc is updated
+    expect(editor.undoStack().length).toBe(1);
+    expect(editor.undoStack()[0].imageSrc).toBe('data:image/jpeg;base64,ORIGINAL');
+    expect(editor.cropSelection()).toBeNull();
+    const croppedUrl = editor.currentImageSrc();
+    expect(croppedUrl).toContain('data:image/jpeg');
+
+    // Undo Crop
+    editor.undo();
+    expect(editor.currentImageSrc()).toBe('data:image/jpeg;base64,ORIGINAL');
+    expect(editor.redoStack().length).toBe(1);
+    expect(editor.redoStack()[0].imageSrc).toBe(croppedUrl);
+
+    // Redo Crop
+    editor.redo();
+    expect(editor.currentImageSrc()).toBe(croppedUrl);
+    expect(editor.undoStack().length).toBe(1);
+    expect(editor.redoStack().length).toBe(0);
   });
 });

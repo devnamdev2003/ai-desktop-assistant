@@ -6,6 +6,7 @@ import { marked } from 'marked';
 import { check, Update } from '@tauri-apps/plugin-updater';
 import { AuthService, SavedConversation, UserProfile, SessionMetadata, ConversationDetail, ActiveUserSession } from './services/auth';
 import { ConfigService } from './services/config';
+import { ImageEditor } from './components/image-editor';
 
 export interface UpdateInfo {
   version: string;
@@ -101,6 +102,7 @@ marked.use({
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.css',
+  imports: [ImageEditor],
   host: {
     '(document:mousemove)': 'handleMouseMove($event)',
     '(document:mouseup)': 'handleMouseUp()',
@@ -233,6 +235,10 @@ export class App {
   isHidingForCapture = signal<boolean>(false);
   attachedScreenshot = signal<string | null>(null);
   previewModalImageUrl = signal<string | null>(null);
+
+  // Screenshot Annotation & Editor State
+  isEditingScreenshot = signal<boolean>(false);
+  screenshotEditorImage = signal<string | null>(null);
 
   constructor() {
     // Universal listener for auth forced-logout events from the global API validator
@@ -1169,9 +1175,9 @@ export class App {
     }
   }
 
-  async toggleMaximize(): Promise<void> {
-    const nextState = !this.isMaximized();
-    this.isMaximized.set(nextState);
+  async setMaximized(maximized: boolean): Promise<void> {
+    if (this.isMaximized() === maximized) return;
+    this.isMaximized.set(maximized);
 
     await this.safeWindowOp(async (win) => {
       try {
@@ -1183,7 +1189,7 @@ export class App {
         await win.setSkipTaskbar(false);
       } catch { }
 
-      if (nextState) {
+      if (maximized) {
         // Maximized screen: DISABLE always-on-top so when user switches to another app,
         // that app is shown and Aivora does not stay stuck covering the whole screen!
         try {
@@ -1213,6 +1219,10 @@ export class App {
 
     this.scrollToBottom();
     setTimeout(() => this.chatInputElement?.nativeElement?.focus(), 50);
+  }
+
+  async toggleMaximize(): Promise<void> {
+    await this.setMaximized(!this.isMaximized());
   }
 
   async minimizeToTaskbar(): Promise<void> {
@@ -1333,7 +1343,43 @@ export class App {
 
   // --- Screen Capture & Image Attachment ---
 
+  async openScreenshotEditor(imageUrl: string): Promise<void> {
+    if (!this.isMaximized()) {
+      await this.setMaximized(true);
+    }
+    this.screenshotEditorImage.set(imageUrl);
+    this.isEditingScreenshot.set(true);
+  }
+
+  onSaveEditedScreenshot(editedDataUrl: string): void {
+    this.attachedScreenshot.set(editedDataUrl);
+    this.isEditingScreenshot.set(false);
+    this.screenshotEditorImage.set(null);
+    if (!this.inputText().trim() || this.inputText() === 'What is on my screen?') {
+      this.inputText.set('Please inspect the highlighted box on my screen.');
+    }
+    setTimeout(() => this.chatInputElement?.nativeElement?.focus(), 100);
+  }
+
+  onCancelScreenshotEditor(): void {
+    this.isEditingScreenshot.set(false);
+    this.screenshotEditorImage.set(null);
+    setTimeout(() => this.chatInputElement?.nativeElement?.focus(), 100);
+  }
+
+  async editAttachedScreenshot(): Promise<void> {
+    const current = this.attachedScreenshot();
+    if (current) {
+      await this.openScreenshotEditor(current);
+    }
+  }
+
   async takeScreenshot(): Promise<void> {
+    if (!this.authService.isAuthenticated()) {
+      this.openAuthModal('signin');
+      return;
+    }
+
     if (this.isCapturingScreen()) return;
     this.isCapturingScreen.set(true);
     this.errorMessage.set(null);
@@ -1440,8 +1486,8 @@ export class App {
       // 5. Restore window visibility immediately
       this.isHidingForCapture.set(false);
 
-      // Convert to compressed jpeg base64 data URL
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      // Convert to compressed jpeg base64 data URL and attach to chat
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
       this.attachedScreenshot.set(dataUrl);
 
       // If input text is empty, suggest asking about the screen
