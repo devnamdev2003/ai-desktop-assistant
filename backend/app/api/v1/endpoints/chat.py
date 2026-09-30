@@ -136,6 +136,15 @@ async def send_chat_message(
     db: Session = Depends(get_db),
 ):
     """Processes an AI assistant question directly using Gemini with real-time SSE token streaming."""
+    # Check max input words limit if configured
+    if settings.MAX_INPUT_WORDS and settings.MAX_INPUT_WORDS > 0:
+        words = chat_req.question.strip().split()
+        if len(words) > settings.MAX_INPUT_WORDS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Message exceeds limit of {settings.MAX_INPUT_WORDS} words (got {len(words)} words). Please shorten your message.",
+            )
+
     conv_id = chat_req.conversation_id
     history_messages = []
 

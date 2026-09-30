@@ -3,4 +3,6 @@ export const environment = {
   apiUrl: 'https://ai-desktop-api.vercel.app',
   appName: 'Aivora Desktop AI Assistant',
   version: '0.1.2',
+  maxInputWords: 500,
+  userMessageTruncateWords: 35,
 };

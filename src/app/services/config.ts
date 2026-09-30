@@ -4,6 +4,8 @@ import { environment } from '../../environments/environment';
 declare global {
   interface Window {
     __AIVORA_API_URL__?: string;
+    __AIVORA_MAX_INPUT_WORDS__?: number;
+    __AIVORA_USER_MESSAGE_TRUNCATE_WORDS__?: number;
   }
 }
 
@@ -12,9 +14,18 @@ declare global {
 })
 export class ConfigService {
   private readonly STORAGE_KEY = 'aivora_api_base_url';
+  private readonly WORDS_LIMIT_KEY = 'aivora_max_input_words';
 
   // Reactive signal for the API Base URL used across the application
   apiUrl = signal<string>(this.resolveInitialApiUrl());
+
+  // Reactive signal for maximum words allowed per chat message (fetched from environment / .env default)
+  maxInputWords = signal<number>(this.resolveInitialMaxWords());
+
+  // Truncate limit for user message preview before minimize/maximize toggle (30 to 40 words, default 35)
+  userMessageTruncateWords = signal<number>(
+    (environment as any).userMessageTruncateWords ?? 35
+  );
 
   isCustomUrl = computed(() => {
     return this.apiUrl() !== environment.apiUrl;
@@ -27,7 +38,46 @@ export class ConfigService {
       if (stored !== null && stored !== this.apiUrl()) {
         this.apiUrl.set(stored.trim());
       }
+      const storedWords = localStorage.getItem(this.WORDS_LIMIT_KEY);
+      if (storedWords !== null) {
+        const parsed = parseInt(storedWords, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          this.maxInputWords.set(parsed);
+        }
+      }
     }
+  }
+
+  private resolveInitialMaxWords(): number {
+    if (typeof window !== 'undefined') {
+      if (typeof window.__AIVORA_MAX_INPUT_WORDS__ === 'number' && window.__AIVORA_MAX_INPUT_WORDS__ > 0) {
+        return window.__AIVORA_MAX_INPUT_WORDS__;
+      }
+      const stored = localStorage.getItem(this.WORDS_LIMIT_KEY);
+      if (stored !== null) {
+        const parsed = parseInt(stored, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          return parsed;
+        }
+      }
+    }
+    return (environment as any).maxInputWords ?? 250;
+  }
+
+  setMaxInputWords(limit: number): void {
+    if (limit > 0) {
+      this.maxInputWords.set(limit);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(this.WORDS_LIMIT_KEY, limit.toString());
+      }
+    }
+  }
+
+  resetMaxInputWords(): void {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(this.WORDS_LIMIT_KEY);
+    }
+    this.maxInputWords.set((environment as any).maxInputWords ?? 250);
   }
 
   private resolveInitialApiUrl(): string {

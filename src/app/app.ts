@@ -203,6 +203,28 @@ export class App {
   manualTokenInput = signal('');
   manualCodeOrUrlInput = signal('');
 
+  // Word limit configuration from ConfigService / environment
+  maxInputWords = computed(() => this.configService.maxInputWords());
+  userMessageTruncateWords = computed(() => this.configService.userMessageTruncateWords());
+
+  // Set of expanded user message IDs (for the 30-40 words truncation/maximize/minimize)
+  expandedUserMessageIds = signal<Set<string>>(new Set());
+
+  // Live word count of prompt input
+  inputWordCount = computed(() => {
+    const text = this.inputText().trim();
+    if (!text) return 0;
+    return text.split(/\s+/).filter(Boolean).length;
+  });
+
+  isOverWordLimit = computed(() => {
+    return this.inputWordCount() > this.maxInputWords();
+  });
+
+  remainingWords = computed(() => {
+    return this.maxInputWords() - this.inputWordCount();
+  });
+
   constructor() {
     // Universal listener for auth forced-logout events from the global API validator
     effect(() => {
@@ -1202,8 +1224,57 @@ export class App {
     // Enter without Shift: Send message
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
+      if (this.isOverWordLimit()) {
+        this.errorMessage.set(
+          `Message exceeds the limit of ${this.maxInputWords()} words (current: ${this.inputWordCount()} words). Please shorten your message before sending.`
+        );
+        return;
+      }
       this.sendMessage();
     }
+  }
+
+  // --- User Message Helper Methods (Truncate, Expand/Maximize, Word Count) ---
+
+  getUserMessageWords(text: string): string[] {
+    if (!text) return [];
+    return text.trim().split(/\s+/).filter(Boolean);
+  }
+
+  getUserMessageWordCount(text: string): number {
+    return this.getUserMessageWords(text).length;
+  }
+
+  isUserMessageTruncated(text: string): boolean {
+    return this.getUserMessageWordCount(text) > this.userMessageTruncateWords();
+  }
+
+  isUserMessageExpanded(msgId: string): boolean {
+    return this.expandedUserMessageIds().has(msgId);
+  }
+
+  toggleUserMessageExpand(msgId: string, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.expandedUserMessageIds.update((currentSet) => {
+      const newSet = new Set(currentSet);
+      if (newSet.has(msgId)) {
+        newSet.delete(msgId);
+      } else {
+        newSet.add(msgId);
+      }
+      return newSet;
+    });
+  }
+
+  getUserMessageDisplayText(msg: ChatMessage): string {
+    if (!this.isUserMessageTruncated(msg.text) || this.isUserMessageExpanded(msg.id)) {
+      return msg.text;
+    }
+    const words = this.getUserMessageWords(msg.text);
+    const limit = this.userMessageTruncateWords();
+    return words.slice(0, limit).join(' ') + '...';
   }
 
   adjustTextareaHeight(element?: HTMLTextAreaElement): void {
@@ -1282,6 +1353,14 @@ export class App {
 
     const questionText = (customText ?? this.inputText()).trim();
     if (!questionText || this.isLoading()) {
+      return;
+    }
+
+    const wordsCount = questionText.split(/\s+/).filter(Boolean).length;
+    if (wordsCount > this.maxInputWords()) {
+      this.errorMessage.set(
+        `Message exceeds the limit of ${this.maxInputWords()} words (current: ${wordsCount} words). Please shorten your message to save credits.`
+      );
       return;
     }
 

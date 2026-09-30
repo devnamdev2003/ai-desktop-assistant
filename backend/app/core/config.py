@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # Gemini AI
     GEMINI_API_KEY: str = ""
 
+    # Chat Input Word Limits
+    MAX_INPUT_WORDS: int = 250
+
     @property
     def cors_origins(self) -> List[str]:
         if not self.ALLOWED_ORIGINS or self.ALLOWED_ORIGINS.strip() == "*":
