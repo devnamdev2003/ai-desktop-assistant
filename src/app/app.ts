@@ -2026,27 +2026,37 @@ export class App {
 
   async handleMouseMove(event: MouseEvent): Promise<void> {
     // -------------------------------------------------
-    // Orb eye tracking
+    // Cute Robot Agent eye tracking
     // -------------------------------------------------
     if (!this.isExpanded) {
-      const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight / 2;
+      let centerX = window.innerWidth / 2;
+      let centerY = window.innerHeight / 2;
+
+      if (typeof document !== 'undefined') {
+        const orbEl = document.getElementById('aivora-orb-button');
+        if (orbEl) {
+          const rect = orbEl.getBoundingClientRect();
+          centerX = rect.left + rect.width / 2;
+          centerY = rect.top + rect.height / 2;
+        }
+      }
 
       const dx = event.clientX - centerX;
       const dy = event.clientY - centerY;
 
-      const maxDistance = 250;
-      const maxLook = 5;
+      const maxDistance = 220;
+      const maxLookX = 5.5;
+      const maxLookY = 4;
 
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      const distance = Math.hypot(dx, dy);
       const factor = Math.min(distance / maxDistance, 1);
 
       this.orbLookX.set(
-        distance > 0 ? (dx / distance) * maxLook * factor : 0
+        distance > 0 ? Math.round((dx / distance) * maxLookX * factor * 10) / 10 : 0
       );
 
       this.orbLookY.set(
-        distance > 0 ? (dy / distance) * maxLook * factor : 0
+        distance > 0 ? Math.round((dy / distance) * maxLookY * factor * 10) / 10 : 0
       );
     }
 

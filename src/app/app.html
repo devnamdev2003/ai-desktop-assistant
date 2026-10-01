@@ -22,42 +22,136 @@
       </button>
 
       <button id="aivora-orb-button" type="button" (mousedown)="startOrbInteraction($event)" (click)="handleOrbClick()"
-        aria-label="Open Aivora AI Assistant" class="group relative flex h-20 w-20 cursor-pointer
+        aria-label="Open Aivora AI Assistant" class="group relative flex h-24 w-24 cursor-pointer
                  items-center justify-center
-                 rounded-full border-0 bg-transparent outline-none">
-        <!-- Outer magical cyan/purple aura glow -->
-        <div class="orb-outer-aura absolute inset-0 rounded-full transition-all duration-500 group-hover:scale-110"></div>
+                 rounded-full border-0 bg-transparent outline-none select-none">
+        <!-- 1. Ambient Neon Dual-Tone Glow (Cyan on left/bottom, Magenta on right) -->
+        <div class="neon-orb-aura absolute -inset-1 rounded-full pointer-events-none"></div>
 
-        <!-- The Glass Bubble Orb Container -->
-        <div class="aivora-bubble-sphere relative flex h-[72px] w-[72px] items-center justify-center rounded-full overflow-hidden transition-transform duration-300 group-hover:scale-105 group-active:scale-95">
-          <!-- Glass Sphere Background & Refraction Gradients -->
-          <div class="bubble-glass-base absolute inset-0 rounded-full"></div>
+        <!-- 2. The Living Glass Bubble Sphere Container -->
+        <div class="neon-orb-sphere relative flex h-[84px] w-[84px] items-center justify-center rounded-full overflow-hidden transition-transform duration-300 group-hover:scale-105 group-active:scale-95">
+          <!-- Deep Dark Core Backdrop -->
+          <div class="absolute inset-0 rounded-full bg-[#030611]"></div>
 
-          <!-- Inner Electric Cyan & Royal Blue Rim Glow -->
-          <div class="bubble-rim-glow absolute inset-0 rounded-full"></div>
+          <!-- Deep Navy Inner Shadow Creature Core with Royal Blue Top Highlight -->
+          <div class="neon-creature-head absolute inset-[9px] rounded-full"></div>
 
-          <!-- Inside Floating Shadow Creature with Eye Tracking -->
-          <div class="shadow-creature absolute flex items-center justify-center rounded-full"
+          <!-- Living Fluid Iridescent Glass Membrane (Exact artwork recreation in SVG) -->
+          <svg class="absolute inset-0 h-full w-full pointer-events-none" viewBox="0 0 100 100" fill="none">
+            <defs>
+              <!-- Outer Neon Rim Gradient (Cyan -> Magenta -> Blue -> Cyan) -->
+              <linearGradient id="neonRimGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#00f5ff" />
+                <stop offset="35%" stop-color="#00d4ff" />
+                <stop offset="65%" stop-color="#ff2a9d" />
+                <stop offset="85%" stop-color="#a855f7" />
+                <stop offset="100%" stop-color="#00f5ff" />
+              </linearGradient>
+
+              <!-- Top-Left Cyan Fluid Glass Gradient -->
+              <radialGradient id="topCyanFluid" cx="30%" cy="20%" r="65%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+                <stop offset="22%" stop-color="#00f0ff" stop-opacity="0.95" />
+                <stop offset="55%" stop-color="#0099ff" stop-opacity="0.85" />
+                <stop offset="85%" stop-color="#1e1b4b" stop-opacity="0.45" />
+                <stop offset="100%" stop-color="transparent" />
+              </radialGradient>
+
+              <!-- Right & Bottom-Right Magenta/Blue Fluid Glass Gradient -->
+              <linearGradient id="magentaFluidGrad" x1="50%" y1="15%" x2="100%" y2="85%">
+                <stop offset="0%" stop-color="#ff2a9d" stop-opacity="0.95" />
+                <stop offset="45%" stop-color="#c026d3" stop-opacity="0.88" />
+                <stop offset="75%" stop-color="#3b82f6" stop-opacity="0.9" />
+                <stop offset="100%" stop-color="#00f5ff" stop-opacity="0.95" />
+              </linearGradient>
+
+              <!-- Bottom Crescent Glow Gradient -->
+              <linearGradient id="bottomGlowGrad" x1="0%" y1="50%" x2="100%" y2="50%">
+                <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.4" />
+                <stop offset="25%" stop-color="#00f5ff" stop-opacity="1" />
+                <stop offset="50%" stop-color="#ffffff" stop-opacity="1" />
+                <stop offset="75%" stop-color="#00f5ff" stop-opacity="1" />
+                <stop offset="100%" stop-color="#a855f7" stop-opacity="0.4" />
+              </linearGradient>
+
+              <!-- Bottom-right cyan/blue liquid lobe -->
+              <radialGradient id="bottomBlueBulb" cx="70%" cy="75%" r="45%">
+                <stop offset="0%" stop-color="#00b4d8" stop-opacity="0.9" />
+                <stop offset="40%" stop-color="#2563eb" stop-opacity="0.8" />
+                <stop offset="80%" stop-color="#7c3aed" stop-opacity="0.5" />
+                <stop offset="100%" stop-color="transparent" />
+              </radialGradient>
+            </defs>
+
+            <!-- Outer Fluid Glass Membrane Ring with Organic Waves -->
+            <path d="M 50 2
+                     C 76 2, 98 24, 98 50
+                     C 98 76, 76 98, 50 98
+                     C 24 98, 2 76, 2 50
+                     C 2 24, 24 2, 50 2 Z
+                     M 50 14
+                     C 32 14, 16 28, 15 46
+                     C 14 56, 18 68, 28 78
+                     C 38 88, 56 89, 68 83
+                     C 78 78, 86 66, 85 52
+                     C 84 36, 70 14, 50 14 Z"
+                  fill="url(#topCyanFluid)"
+                  fill-rule="evenodd" />
+
+            <!-- Magenta & Cobalt Liquid Swirl on Right & Bottom -->
+            <path d="M 65 10
+                     C 86 16, 98 32, 98 52
+                     C 98 74, 82 94, 60 97
+                     C 72 92, 85 80, 85 64
+                     C 85 48, 76 34, 66 22
+                     C 63 18, 64 14, 65 10 Z"
+                  fill="url(#magentaFluidGrad)" />
+
+            <!-- Bulbous bottom-right cyan/blue liquid lobe -->
+            <path d="M 45 98
+                     C 68 98, 88 84, 88 64
+                     C 88 74, 76 86, 62 88
+                     C 50 90, 42 86, 36 84
+                     C 32 88, 38 96, 45 98 Z"
+                  fill="url(#bottomBlueBulb)" />
+
+            <!-- Outer Neon Glowing Perimeter Line -->
+            <circle cx="50" cy="50" r="48.5"
+                    stroke="url(#neonRimGrad)"
+                    stroke-width="1.8"
+                    fill="none" />
+
+            <!-- Bottom Razor-Sharp White-Cyan Specular Glare Arc -->
+            <path d="M 28 94 C 42 97.5, 58 97.5, 72 94 C 58 95.8, 42 95.8, 28 94 Z"
+                  fill="#ffffff" />
+            <path d="M 22 91 C 40 96.5, 60 96.5, 78 91 C 60 94.8, 40 94.8, 22 91 Z"
+                  fill="url(#bottomGlowGrad)"
+                  opacity="0.9" />
+
+            <!-- Upper Left Delicate Glass Sheen -->
+            <path d="M 20 18 C 30 11, 46 8, 60 9 C 48 10.5, 34 13.5, 20 18 Z"
+                  fill="#ffffff"
+                  opacity="0.8" />
+          </svg>
+
+          <!-- 3. The Animated Mascot Glowing Eyes Rig -->
+          <div class="neon-eyes-rig absolute flex items-center justify-center pointer-events-none"
                [style.transform]="'translate(' + orbLookX() + 'px, ' + (orbLookY() + orbFloatY()) + 'px)'">
-            <!-- Two Glowing White Expressive Eyes -->
-            <div class="creature-eyes flex items-center"
-                 [class.creature-blinking]="isOrbBlinking()"
-                 [style.transform]="'translate(' + (orbLookX() * 1.5) + 'px, ' + (orbLookY() * 1.5) + 'px)'">
-              <!-- Left Eye: slightly larger, glowing white oval -->
-              <div class="creature-eye creature-eye-left"></div>
+            <!-- Left and Right Glowing White Oval Eyes with Intense Neon Bloom -->
+            <div class="neon-eyes-pair flex items-center gap-[11px]"
+                 [class.blinking]="isOrbBlinking()"
+                 [style.transform]="'translate(' + (orbLookX() * 0.4) + 'px, ' + (orbLookY() * 0.4) + 'px)'">
+              <!-- Left Eye -->
+              <div class="neon-eye neon-eye-left"></div>
 
-              <!-- Right Eye: slightly smaller, cute tilted oval -->
-              <div class="creature-eye creature-eye-right"></div>
+              <!-- Right Eye -->
+              <div class="neon-eye neon-eye-right"></div>
             </div>
           </div>
 
-          <!-- Glass Specular Highlight (Curved Top-Left Glint) -->
-          <div class="bubble-specular-glint absolute pointer-events-none"></div>
-          <div class="bubble-specular-dot absolute pointer-events-none"></div>
-
-          <!-- Auth indicator badge if not logged in -->
+          <!-- Auth Status Indicator Badge if not logged in -->
           @if (!authService.isAuthenticated()) {
-          <div class="absolute top-1 right-1 z-20 flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 border border-cyan-400 text-cyan-300 shadow-md shadow-cyan-500/40"
+          <div class="absolute top-1.5 right-1.5 z-20 flex h-4 w-4 items-center justify-center rounded-full bg-slate-950/90 border border-cyan-400 text-cyan-300 shadow-md shadow-cyan-500/50"
             title="Authentication required">
             <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -132,20 +226,15 @@
 
       <!-- LEFT: BRAND LOGO -->
       <div class="flex items-center gap-2">
-        <!-- Mini glowing glass bubble orb -->
-        <div class="relative flex h-5 w-5 items-center justify-center rounded-full overflow-hidden
-                    border border-cyan-400/60 shadow-[0_0_8px_rgba(0,229,255,0.7)]
-                    bg-[radial-gradient(circle_at_35%_30%,#38bdf8_0%,#1e1b4b_65%,#030712_100%)]">
-          <!-- Mini inner shadow creature -->
-          <div class="relative flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#0d0b1a]">
-            <!-- Mini eyes -->
-            <div class="flex items-center gap-[2px]">
-              <div class="h-1.5 w-1 rounded-full bg-white shadow-[0_0_4px_#ffffff]"></div>
-              <div class="h-1.5 w-1 rounded-full bg-white shadow-[0_0_4px_#ffffff] rotate-[6deg]"></div>
-            </div>
+        <!-- Mini Neon Orb Mascot Brand Icon -->
+        <div class="neon-avatar-orb">
+          <div class="avatar-rim"></div>
+          <div class="avatar-core"></div>
+          <div class="avatar-eyes">
+            <div class="avatar-eye avatar-eye-left"></div>
+            <div class="avatar-eye avatar-eye-right"></div>
           </div>
-          <!-- Mini glass glint -->
-          <div class="absolute top-[1.5px] left-[2.5px] h-[4px] w-[7px] rounded-full border-t border-l border-white/90 -rotate-25 pointer-events-none"></div>
+          <div class="avatar-glint"></div>
         </div>
         <span class="text-xs font-bold tracking-wider text-white uppercase">Aivora</span>
       </div>
@@ -281,9 +370,66 @@
         @if (!authService.isAuthenticated()) {
         <!-- WELCOME & SIGN IN / SIGN UP SCREEN -->
         <div class="flex flex-col items-center justify-center my-auto py-10 text-center px-4">
-          <!-- Aivora Glowing Orb -->
-          <div class="relative flex items-center justify-center rounded-3xl bg-purple-500/10 border border-purple-500/25 p-5 mb-5 shadow-2xl shadow-purple-950/40">
-            <div class="h-14 w-14 rounded-full bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)] border border-white/30 shadow-[0_0_20px_rgba(155,124,255,0.6)]"></div>
+          <!-- Aivora Neon Orb Mascot -->
+          <div class="relative flex items-center justify-center my-3">
+            <div class="neon-orb-aura absolute -inset-2 rounded-full pointer-events-none"></div>
+            <div class="neon-orb-sphere relative flex h-[74px] w-[74px] items-center justify-center rounded-full overflow-hidden">
+              <div class="absolute inset-0 rounded-full bg-[#030611]"></div>
+              <div class="neon-creature-head absolute inset-[8px] rounded-full"></div>
+              <svg class="absolute inset-0 h-full w-full pointer-events-none" viewBox="0 0 100 100" fill="none">
+                <defs>
+                  <linearGradient id="neonRimGradLock" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#00f5ff" />
+                    <stop offset="35%" stop-color="#00d4ff" />
+                    <stop offset="65%" stop-color="#ff2a9d" />
+                    <stop offset="85%" stop-color="#a855f7" />
+                    <stop offset="100%" stop-color="#00f5ff" />
+                  </linearGradient>
+                  <radialGradient id="topCyanFluidLock" cx="30%" cy="20%" r="65%">
+                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+                    <stop offset="22%" stop-color="#00f0ff" stop-opacity="0.95" />
+                    <stop offset="55%" stop-color="#0099ff" stop-opacity="0.85" />
+                    <stop offset="85%" stop-color="#1e1b4b" stop-opacity="0.45" />
+                    <stop offset="100%" stop-color="transparent" />
+                  </radialGradient>
+                  <linearGradient id="magentaFluidGradLock" x1="50%" y1="15%" x2="100%" y2="85%">
+                    <stop offset="0%" stop-color="#ff2a9d" stop-opacity="0.95" />
+                    <stop offset="45%" stop-color="#c026d3" stop-opacity="0.88" />
+                    <stop offset="75%" stop-color="#3b82f6" stop-opacity="0.9" />
+                    <stop offset="100%" stop-color="#00f5ff" stop-opacity="0.95" />
+                  </linearGradient>
+                  <linearGradient id="bottomGlowGradLock" x1="0%" y1="50%" x2="100%" y2="50%">
+                    <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.4" />
+                    <stop offset="25%" stop-color="#00f5ff" stop-opacity="1" />
+                    <stop offset="50%" stop-color="#ffffff" stop-opacity="1" />
+                    <stop offset="75%" stop-color="#00f5ff" stop-opacity="1" />
+                    <stop offset="100%" stop-color="#a855f7" stop-opacity="0.4" />
+                  </linearGradient>
+                  <radialGradient id="bottomBlueBulbLock" cx="70%" cy="75%" r="45%">
+                    <stop offset="0%" stop-color="#00b4d8" stop-opacity="0.9" />
+                    <stop offset="40%" stop-color="#2563eb" stop-opacity="0.8" />
+                    <stop offset="80%" stop-color="#7c3aed" stop-opacity="0.5" />
+                    <stop offset="100%" stop-color="transparent" />
+                  </radialGradient>
+                </defs>
+                <path d="M 50 2 C 76 2, 98 24, 98 50 C 98 76, 76 98, 50 98 C 24 98, 2 76, 2 50 C 2 24, 24 2, 50 2 Z M 50 14 C 32 14, 16 28, 15 46 C 14 56, 18 68, 28 78 C 38 88, 56 89, 68 83 C 78 78, 86 66, 85 52 C 84 36, 70 14, 50 14 Z"
+                      fill="url(#topCyanFluidLock)" fill-rule="evenodd" />
+                <path d="M 65 10 C 86 16, 98 32, 98 52 C 98 74, 82 94, 60 97 C 72 92, 85 80, 85 64 C 85 48, 76 34, 66 22 C 63 18, 64 14, 65 10 Z"
+                      fill="url(#magentaFluidGradLock)" />
+                <path d="M 45 98 C 68 98, 88 84, 88 64 C 88 74, 76 86, 62 88 C 50 90, 42 86, 36 84 C 32 88, 38 96, 45 98 Z"
+                      fill="url(#bottomBlueBulbLock)" />
+                <circle cx="50" cy="50" r="48.5" stroke="url(#neonRimGradLock)" stroke-width="1.8" fill="none" />
+                <path d="M 28 94 C 42 97.5, 58 97.5, 72 94 C 58 95.8, 42 95.8, 28 94 Z" fill="#ffffff" />
+                <path d="M 22 91 C 40 96.5, 60 96.5, 78 91 C 60 94.8, 40 94.8, 22 91 Z" fill="url(#bottomGlowGradLock)" opacity="0.9" />
+                <path d="M 20 18 C 30 11, 46 8, 60 9 C 48 10.5, 34 13.5, 20 18 Z" fill="#ffffff" opacity="0.8" />
+              </svg>
+              <div class="relative flex items-center justify-center pointer-events-none">
+                <div class="neon-eyes-pair flex items-center gap-[9px]" [class.blinking]="isOrbBlinking()">
+                  <div class="neon-eye neon-eye-left" style="width: 12px; height: 17px;"></div>
+                  <div class="neon-eye neon-eye-right" style="width: 12px; height: 17px;"></div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <h2 class="text-2xl font-bold text-white tracking-tight">
@@ -369,12 +515,77 @@
         @if (messages().length === 0) {
         <div class="flex flex-col items-center justify-center my-auto py-6 text-center">
 
-          <!-- Aivora orb -->
-          <div class="flex items-center justify-center rounded-full bg-white/5 border border-white/10"
+          <!-- Main Chat Screen Neon Orb Mascot Hero -->
+          <div class="relative flex items-center justify-center my-3"
             [class]="isMaximized() ? 'mb-6 h-24 w-24' : 'mb-5 h-20 w-20'">
-            <div
-              class="rounded-full bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)] border border-white/20"
-              [class]="isMaximized() ? 'h-11 w-11' : 'h-9 w-9'"></div>
+            <!-- Ambient dual-tone neon aura -->
+            <div class="neon-orb-aura absolute -inset-2 rounded-full pointer-events-none"></div>
+
+            <!-- Sphere -->
+            <div class="neon-orb-sphere relative flex items-center justify-center rounded-full overflow-hidden transition-transform duration-300 hover:scale-105"
+              [class]="isMaximized() ? 'h-[80px] w-[80px]' : 'h-[72px] w-[72px]'">
+              <!-- Deep Dark Core Backdrop -->
+              <div class="absolute inset-0 rounded-full bg-[#030611]"></div>
+              <div class="neon-creature-head absolute inset-[8px] rounded-full"></div>
+
+              <!-- Fluid Iridescent Glass SVG Membrane -->
+              <svg class="absolute inset-0 h-full w-full pointer-events-none" viewBox="0 0 100 100" fill="none">
+                <defs>
+                  <linearGradient id="neonRimGradChat" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#00f5ff" />
+                    <stop offset="35%" stop-color="#00d4ff" />
+                    <stop offset="65%" stop-color="#ff2a9d" />
+                    <stop offset="85%" stop-color="#a855f7" />
+                    <stop offset="100%" stop-color="#00f5ff" />
+                  </linearGradient>
+                  <radialGradient id="topCyanFluidChat" cx="30%" cy="20%" r="65%">
+                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+                    <stop offset="22%" stop-color="#00f0ff" stop-opacity="0.95" />
+                    <stop offset="55%" stop-color="#0099ff" stop-opacity="0.85" />
+                    <stop offset="85%" stop-color="#1e1b4b" stop-opacity="0.45" />
+                    <stop offset="100%" stop-color="transparent" />
+                  </radialGradient>
+                  <linearGradient id="magentaFluidGradChat" x1="50%" y1="15%" x2="100%" y2="85%">
+                    <stop offset="0%" stop-color="#ff2a9d" stop-opacity="0.95" />
+                    <stop offset="45%" stop-color="#c026d3" stop-opacity="0.88" />
+                    <stop offset="75%" stop-color="#3b82f6" stop-opacity="0.9" />
+                    <stop offset="100%" stop-color="#00f5ff" stop-opacity="0.95" />
+                  </linearGradient>
+                  <linearGradient id="bottomGlowGradChat" x1="0%" y1="50%" x2="100%" y2="50%">
+                    <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.4" />
+                    <stop offset="25%" stop-color="#00f5ff" stop-opacity="1" />
+                    <stop offset="50%" stop-color="#ffffff" stop-opacity="1" />
+                    <stop offset="75%" stop-color="#00f5ff" stop-opacity="1" />
+                    <stop offset="100%" stop-color="#a855f7" stop-opacity="0.4" />
+                  </linearGradient>
+                  <radialGradient id="bottomBlueBulbChat" cx="70%" cy="75%" r="45%">
+                    <stop offset="0%" stop-color="#00b4d8" stop-opacity="0.9" />
+                    <stop offset="40%" stop-color="#2563eb" stop-opacity="0.8" />
+                    <stop offset="80%" stop-color="#7c3aed" stop-opacity="0.5" />
+                    <stop offset="100%" stop-color="transparent" />
+                  </radialGradient>
+                </defs>
+
+                <path d="M 50 2 C 76 2, 98 24, 98 50 C 98 76, 76 98, 50 98 C 24 98, 2 76, 2 50 C 2 24, 24 2, 50 2 Z M 50 14 C 32 14, 16 28, 15 46 C 14 56, 18 68, 28 78 C 38 88, 56 89, 68 83 C 78 78, 86 66, 85 52 C 84 36, 70 14, 50 14 Z"
+                      fill="url(#topCyanFluidChat)" fill-rule="evenodd" />
+                <path d="M 65 10 C 86 16, 98 32, 98 52 C 98 74, 82 94, 60 97 C 72 92, 85 80, 85 64 C 85 48, 76 34, 66 22 C 63 18, 64 14, 65 10 Z"
+                      fill="url(#magentaFluidGradChat)" />
+                <path d="M 45 98 C 68 98, 88 84, 88 64 C 88 74, 76 86, 62 88 C 50 90, 42 86, 36 84 C 32 88, 38 96, 45 98 Z"
+                      fill="url(#bottomBlueBulbChat)" />
+                <circle cx="50" cy="50" r="48.5" stroke="url(#neonRimGradChat)" stroke-width="1.8" fill="none" />
+                <path d="M 28 94 C 42 97.5, 58 97.5, 72 94 C 58 95.8, 42 95.8, 28 94 Z" fill="#ffffff" />
+                <path d="M 22 91 C 40 96.5, 60 96.5, 78 91 C 60 94.8, 40 94.8, 22 91 Z" fill="url(#bottomGlowGradChat)" opacity="0.9" />
+                <path d="M 20 18 C 30 11, 46 8, 60 9 C 48 10.5, 34 13.5, 20 18 Z" fill="#ffffff" opacity="0.8" />
+              </svg>
+
+              <!-- Glowing Mascot Eyes in Chat Screen -->
+              <div class="relative flex items-center justify-center pointer-events-none">
+                <div class="neon-eyes-pair flex items-center gap-[9px]" [class.blinking]="isOrbBlinking()">
+                  <div class="neon-eye neon-eye-left" style="width: 12px; height: 17px;"></div>
+                  <div class="neon-eye neon-eye-right" style="width: 12px; height: 17px;"></div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Title -->
@@ -501,10 +712,16 @@
           <!-- ASSISTANT MESSAGE -->
           @if (msg.sender === 'assistant') {
           <div class="flex items-start gap-2.5">
-            <!-- Mini avatar -->
-            <div class="h-6 w-6 rounded-full shrink-0 mt-1
-                             bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]
-                             border border-white/15"></div>
+            <!-- Mini Neon Orb Mascot Avatar -->
+            <div class="neon-avatar-orb mt-1">
+              <div class="avatar-rim"></div>
+              <div class="avatar-core"></div>
+              <div class="avatar-eyes">
+                <div class="avatar-eye avatar-eye-left"></div>
+                <div class="avatar-eye avatar-eye-right"></div>
+              </div>
+              <div class="avatar-glint"></div>
+            </div>
 
             <!-- Assistant bubble -->
             <div
@@ -550,9 +767,16 @@
           <!-- THINKING INDICATOR -->
           @if (isLoading()) {
           <div class="flex items-start gap-2.5">
-            <div class="h-6 w-6 rounded-full shrink-0 mt-1
-                           bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]
-                           border border-white/15"></div>
+            <!-- Mini Neon Orb Mascot Avatar -->
+            <div class="neon-avatar-orb mt-1">
+              <div class="avatar-rim"></div>
+              <div class="avatar-core"></div>
+              <div class="avatar-eyes">
+                <div class="avatar-eye avatar-eye-left"></div>
+                <div class="avatar-eye avatar-eye-right"></div>
+              </div>
+              <div class="avatar-glint"></div>
+            </div>
             <div class="flex items-center gap-2 rounded-2xl rounded-tl-sm
                            border border-white/10 bg-slate-900/60 px-3.5 py-2.5 text-xs text-white/80">
               <span class="text-white/70">Aivora is thinking</span>
