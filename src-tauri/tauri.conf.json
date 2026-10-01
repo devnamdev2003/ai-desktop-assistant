@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Aivora",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "identifier": "com.devnamdev.aivora",
   "build": {
     "frontendDist": "../dist",
@@ -34,7 +34,9 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["aivora"]
+        "schemes": [
+          "aivora"
+        ]
       }
     },
     "updater": {

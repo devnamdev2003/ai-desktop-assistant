@@ -78,3 +78,6 @@ env/
 .pytest_cache/
 .mypy_cache/
 .vscode
+.github
+release.md
+release.md
