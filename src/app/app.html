@@ -25,22 +25,39 @@
         aria-label="Open Aivora AI Assistant" class="group relative flex h-20 w-20 cursor-pointer
                  items-center justify-center
                  rounded-full border-0 bg-transparent outline-none">
-        <!-- Outer glow -->
-        <div class="absolute inset-0 rounded-full
-                   bg-[rgba(20,20,35,0.8)]
-                   shadow-[0_0_16px_rgba(120,80,255,0.7),0_0_35px_rgba(80,120,255,0.3)]
-                   transition-all duration-300
-                   group-hover:scale-105"></div>
+        <!-- Outer magical cyan/purple aura glow -->
+        <div class="orb-outer-aura absolute inset-0 rounded-full transition-all duration-500 group-hover:scale-110"></div>
 
-        <!-- Inner orb -->
-        <div class="relative h-9 w-9 rounded-full
-                   bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%,#24105f)]
-                   shadow-[0_0_14px_rgba(150,120,255,0.9),0_0_28px_rgba(100,70,255,0.5)]
-                   transition-transform duration-300
-                   group-hover:scale-110
-                   group-active:scale-95 animate-pulse">
+        <!-- The Glass Bubble Orb Container -->
+        <div class="aivora-bubble-sphere relative flex h-[72px] w-[72px] items-center justify-center rounded-full overflow-hidden transition-transform duration-300 group-hover:scale-105 group-active:scale-95">
+          <!-- Glass Sphere Background & Refraction Gradients -->
+          <div class="bubble-glass-base absolute inset-0 rounded-full"></div>
+
+          <!-- Inner Electric Cyan & Royal Blue Rim Glow -->
+          <div class="bubble-rim-glow absolute inset-0 rounded-full"></div>
+
+          <!-- Inside Floating Shadow Creature with Eye Tracking -->
+          <div class="shadow-creature absolute flex items-center justify-center rounded-full"
+               [style.transform]="'translate(' + orbLookX() + 'px, ' + (orbLookY() + orbFloatY()) + 'px)'">
+            <!-- Two Glowing White Expressive Eyes -->
+            <div class="creature-eyes flex items-center"
+                 [class.creature-blinking]="isOrbBlinking()"
+                 [style.transform]="'translate(' + (orbLookX() * 1.5) + 'px, ' + (orbLookY() * 1.5) + 'px)'">
+              <!-- Left Eye: slightly larger, glowing white oval -->
+              <div class="creature-eye creature-eye-left"></div>
+
+              <!-- Right Eye: slightly smaller, cute tilted oval -->
+              <div class="creature-eye creature-eye-right"></div>
+            </div>
+          </div>
+
+          <!-- Glass Specular Highlight (Curved Top-Left Glint) -->
+          <div class="bubble-specular-glint absolute pointer-events-none"></div>
+          <div class="bubble-specular-dot absolute pointer-events-none"></div>
+
+          <!-- Auth indicator badge if not logged in -->
           @if (!authService.isAuthenticated()) {
-          <div class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 border border-purple-400/80 text-purple-300 shadow"
+          <div class="absolute top-1 right-1 z-20 flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 border border-cyan-400 text-cyan-300 shadow-md shadow-cyan-500/40"
             title="Authentication required">
             <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -115,10 +132,21 @@
 
       <!-- LEFT: BRAND LOGO -->
       <div class="flex items-center gap-2">
-        <!-- Mini glowing Aivora orb -->
-        <div class="relative flex h-5 w-5 items-center justify-center rounded-full
-                   bg-[radial-gradient(circle_at_35%_30%,#fff,#9b7cff_35%,#5b3fd1_70%)]
-                   border border-white/30 shadow-[0_0_8px_rgba(155,124,255,0.6)]"></div>
+        <!-- Mini glowing glass bubble orb -->
+        <div class="relative flex h-5 w-5 items-center justify-center rounded-full overflow-hidden
+                    border border-cyan-400/60 shadow-[0_0_8px_rgba(0,229,255,0.7)]
+                    bg-[radial-gradient(circle_at_35%_30%,#38bdf8_0%,#1e1b4b_65%,#030712_100%)]">
+          <!-- Mini inner shadow creature -->
+          <div class="relative flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#0d0b1a]">
+            <!-- Mini eyes -->
+            <div class="flex items-center gap-[2px]">
+              <div class="h-1.5 w-1 rounded-full bg-white shadow-[0_0_4px_#ffffff]"></div>
+              <div class="h-1.5 w-1 rounded-full bg-white shadow-[0_0_4px_#ffffff] rotate-[6deg]"></div>
+            </div>
+          </div>
+          <!-- Mini glass glint -->
+          <div class="absolute top-[1.5px] left-[2.5px] h-[4px] w-[7px] rounded-full border-t border-l border-white/90 -rotate-25 pointer-events-none"></div>
+        </div>
         <span class="text-xs font-bold tracking-wider text-white uppercase">Aivora</span>
       </div>
 

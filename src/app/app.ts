@@ -290,6 +290,21 @@ export class App {
       });
     }
     this.checkForUpdates(false);
+
+        // Natural orb blinking
+    const blink = () => {
+      if (!this.isExpanded) {
+        this.isOrbBlinking.set(true);
+
+        setTimeout(() => {
+          this.isOrbBlinking.set(false);
+        }, 120);
+      }
+
+      setTimeout(blink, 3000 + Math.random() * 3000);
+    };
+
+    setTimeout(blink, 2500);
   }
 
   /**
@@ -1103,12 +1118,18 @@ export class App {
     },
   ];
 
-  // Orb click/drag state
+    // Orb click/drag state
   private orbMouseDown = false;
   private orbDragging = false;
   private orbStartX = 0;
   private orbStartY = 0;
   private suppressNextOrbClick = false;
+
+  // Orb character animation / eye tracking
+  orbLookX = signal(0);
+  orbLookY = signal(0);
+  orbFloatY = signal(0);
+  isOrbBlinking = signal(false);
 
   async toggleAssistant(): Promise<void> {
     this.isExpanded = !this.isExpanded;
@@ -2004,6 +2025,34 @@ export class App {
   }
 
   async handleMouseMove(event: MouseEvent): Promise<void> {
+    // -------------------------------------------------
+    // Orb eye tracking
+    // -------------------------------------------------
+    if (!this.isExpanded) {
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+
+      const dx = event.clientX - centerX;
+      const dy = event.clientY - centerY;
+
+      const maxDistance = 250;
+      const maxLook = 5;
+
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const factor = Math.min(distance / maxDistance, 1);
+
+      this.orbLookX.set(
+        distance > 0 ? (dx / distance) * maxLook * factor : 0
+      );
+
+      this.orbLookY.set(
+        distance > 0 ? (dy / distance) * maxLook * factor : 0
+      );
+    }
+
+    // -------------------------------------------------
+    // Existing orb drag behavior
+    // -------------------------------------------------
     if (!this.orbMouseDown || this.orbDragging) {
       return;
     }
@@ -2025,8 +2074,9 @@ export class App {
 
   handleMouseUp(): void {
     this.orbMouseDown = false;
+    this.orbDragging = false;
   }
-
+  
   handleOrbClick(): void {
     if (this.suppressNextOrbClick) {
       this.suppressNextOrbClick = false;

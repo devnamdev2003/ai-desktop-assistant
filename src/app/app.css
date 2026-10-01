@@ -1,0 +1,314 @@
+/* ========================================================================== */
+/* AIVORA BUBBLE CHARACTER ORB STYLES                                         */
+/* Crystal Glass Bubble with Living Shadow Spirit & Glowing White Eyes         */
+/* ========================================================================== */
+
+/* 1. Outer Aura Glow (Ambient Pulsing) */
+.orb-outer-aura {
+  background: radial-gradient(
+    circle,
+    rgba(0, 229, 255, 0.35) 0%,
+    rgba(37, 99, 235, 0.22) 45%,
+    rgba(126, 34, 206, 0.15) 70%,
+    transparent 80%
+  );
+  filter: blur(10px);
+  animation: orbAuraPulse 3.5s ease-in-out infinite alternate;
+}
+
+@keyframes orbAuraPulse {
+  0% {
+    transform: scale(0.96);
+    opacity: 0.75;
+  }
+  100% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+/* 2. Glass Bubble Sphere Container */
+/* ============================================================
+   AIVORA GLASS SPHERE
+   Cyan -> Blue -> Violet animated glass border
+   ============================================================ */
+
+.aivora-bubble-sphere {
+  position: relative;
+
+  background:
+    radial-gradient(
+      circle at 32% 25%,
+      rgba(255, 255, 255, 0.28) 0%,
+      rgba(130, 190, 255, 0.16) 14%,
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 50% 55%,
+      rgba(24, 34, 75, 0.92) 0%,
+      rgba(5, 10, 28, 0.97) 58%,
+      rgba(1, 5, 16, 1) 100%
+    );
+
+  border: 1.5px solid transparent;
+
+  box-shadow:
+    0 0 10px rgba(0, 229, 255, 0.35),
+    0 0 25px rgba(0, 140, 255, 0.25),
+    0 0 45px rgba(124, 58, 237, 0.18),
+    inset 0 0 10px rgba(255, 255, 255, 0.18),
+    inset 0 0 22px rgba(0, 180, 255, 0.25),
+    inset -8px -10px 22px rgba(0, 229, 255, 0.3),
+    inset 8px 5px 20px rgba(124, 58, 237, 0.22);
+
+  isolation: isolate;
+  overflow: hidden;
+
+  animation: glassSphereBreath 4s ease-in-out infinite;
+}
+
+/* ============================================================
+   ANIMATED GLASS BORDER
+   ============================================================ */
+
+.aivora-bubble-sphere::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+
+  border-radius: 50%;
+
+  background: conic-gradient(
+    from 0deg,
+    #00e5ff 0deg,
+    #38bdf8 55deg,
+    #2563eb 110deg,
+    #6366f1 170deg,
+    #a855f7 225deg,
+    #7c3aed 270deg,
+    #2563eb 320deg,
+    #00e5ff 360deg
+  );
+
+  animation: orbBorderRotate 5s linear infinite;
+
+  z-index: -2;
+
+  filter: blur(0.2px) drop-shadow(0 0 5px rgba(0, 229, 255, 0.65))
+    drop-shadow(0 0 10px rgba(124, 58, 237, 0.35));
+}
+
+/* Inner dark layer keeps the border thin */
+.aivora-bubble-sphere::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.12), transparent 24%),
+    radial-gradient(circle at 50% 55%, rgba(10, 17, 40, 0.94), rgba(2, 6, 23, 0.98) 78%);
+
+  box-shadow:
+    inset 0 0 10px rgba(255, 255, 255, 0.08),
+    inset 0 0 25px rgba(0, 180, 255, 0.18);
+
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* 3. Glass Refraction & Bottom Rim Electric Glow */
+.bubble-glass-base {
+  background:
+    /* Top-left glass reflection */
+    radial-gradient(
+      ellipse at 27% 18%,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0.16) 8%,
+      transparent 28%
+    ),
+    /* Cyan lower glass refraction */
+    radial-gradient(
+        ellipse at 72% 92%,
+        rgba(0, 229, 255, 0.48) 0%,
+        rgba(0, 180, 255, 0.18) 28%,
+        transparent 60%
+      ),
+    /* Purple side refraction */
+    radial-gradient(
+        ellipse at 100% 52%,
+        rgba(168, 85, 247, 0.42) 0%,
+        rgba(124, 58, 237, 0.2) 28%,
+        transparent 62%
+      ),
+    /* Blue upper-right glass */
+    radial-gradient(ellipse at 80% 10%, rgba(59, 130, 246, 0.3) 0%, transparent 45%);
+
+  opacity: 0.95;
+
+  mix-blend-mode: screen;
+
+  pointer-events: none;
+}
+
+.bubble-rim-glow {
+  border-radius: 50%;
+
+  background: conic-gradient(
+    from 180deg,
+    transparent 0deg,
+    rgba(0, 229, 255, 0.12) 45deg,
+    rgba(0, 229, 255, 0.42) 90deg,
+    transparent 140deg,
+    rgba(168, 85, 247, 0.38) 220deg,
+    rgba(59, 130, 246, 0.28) 280deg,
+    transparent 330deg
+  );
+
+  mix-blend-mode: screen;
+
+  animation: rimLightFlow 3.2s ease-in-out infinite alternate;
+
+  pointer-events: none;
+}
+
+@keyframes rimLightFlow {
+  0% {
+    opacity: 0.55;
+    transform: rotate(-15deg) scale(0.98);
+  }
+
+  50% {
+    opacity: 0.9;
+    transform: rotate(12deg) scale(1.01);
+  }
+
+  100% {
+    opacity: 0.65;
+    transform: rotate(28deg) scale(0.99);
+  }
+}
+
+/* 4. Top-Left Curved Glass Specular Glint */
+.bubble-specular-glint {
+  display: none;
+}
+
+.bubble-specular-dot {
+  display: none;
+}
+
+/* 5. Floating Shadow Creature Inside the Sphere */
+.shadow-creature {
+  width: 47px;
+  height: 47px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #231d3d 0%, #0d0b1a 60%, #05040a 100%);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s cubic-bezier(0.2, 0, 0.2, 1);
+  animation: creatureIdleFloat 4s ease-in-out infinite alternate;
+}
+
+@keyframes creatureIdleFloat {
+  0% {
+    transform: translateY(-2px);
+  }
+  100% {
+    transform: translateY(2px);
+  }
+}
+
+/* 6. Glowing Expressive Oval Eyes */
+.creature-eyes {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition: transform 0.08s ease-out;
+}
+
+.creature-eye {
+  background: #ffffff;
+  box-shadow:
+    0 0 5px #ffffff,
+    0 0 12px rgba(255, 255, 255, 0.95),
+    0 0 20px rgba(0, 229, 255, 0.85),
+    0 0 30px rgba(0, 150, 255, 0.5);
+  border-radius: 50%;
+  transition:
+    transform 0.08s ease-out,
+    height 0.1s ease-in-out,
+    box-shadow 0.15s ease-out;
+}
+
+/* Left eye: slightly larger, upright */
+.creature-eye-left {
+  width: 10.5px;
+  height: 15.5px;
+  transform: rotate(-3deg);
+}
+
+/* Right eye: slightly smaller, cute tilt */
+.creature-eye-right {
+  width: 9.5px;
+  height: 14.5px;
+  transform: rotate(5deg) translateY(0.5px);
+}
+
+/* Natural Blinking Animation State */
+.creature-eyes.creature-blinking .creature-eye {
+  transform: scaleY(0.08) !important;
+  box-shadow:
+    0 0 6px #ffffff,
+    0 0 10px rgba(0, 229, 255, 0.6) !important;
+}
+
+/* 7. Hover & Active States */
+.group:hover .aivora-bubble-sphere {
+  box-shadow:
+    0 0 22px rgba(0, 229, 255, 0.8),
+    0 0 40px rgba(0, 119, 255, 0.55),
+    inset 0 0 0 1.8px rgba(255, 255, 255, 0.8),
+    inset 0 0 18px rgba(0, 229, 255, 0.9),
+    inset -5px -8px 22px rgba(0, 240, 255, 1),
+    inset 6px 4px 18px rgba(123, 44, 191, 0.7);
+}
+
+.group:hover .creature-eye {
+  box-shadow:
+    0 0 8px #ffffff,
+    0 0 16px rgba(255, 255, 255, 1),
+    0 0 26px rgba(0, 229, 255, 0.95),
+    0 0 38px rgba(0, 150, 255, 0.7);
+}
+
+.group:active .creature-eyes {
+  transform: scale(0.9, 0.6) !important;
+}
+
+/* Border continuously rotates around the sphere */
+@keyframes orbBorderRotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Very subtle breathing effect */
+@keyframes glassSphereBreath {
+  0%,
+  100% {
+    filter: brightness(0.96) saturate(1.05);
+  }
+
+  50% {
+    filter: brightness(1.08) saturate(1.18);
+  }
+}
