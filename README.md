@@ -14,6 +14,8 @@
 <p align="center">
   <a href="https://github.com/devnamdev2003/ai-desktop-assistant/releases/latest"><strong>⬇️ Download Aivora for Windows</strong></a>
   &nbsp;•&nbsp;
+  <a href="./public/notes/index.html"><strong>🎬 View Interactive Flow Slideshow</strong></a>
+  &nbsp;•&nbsp;
   <a href="https://github.com/devnamdev2003/ai-desktop-assistant/releases">Releases</a>
   &nbsp;•&nbsp;
   <a href="https://github.com/devnamdev2003/ai-desktop-assistant">Source Code</a>
@@ -73,7 +75,7 @@ The project is built as a real desktop application rather than a browser-only An
 
 ## 🧱 Architecture
 
-Aivora uses a three-layer architecture:
+Aivora uses a three-layer architecture. *(Explore each layer in the [Interactive Architecture Slideshow](./public/notes/index.html):
 
 ```text
 ┌───────────────────────────────────────────────┐
