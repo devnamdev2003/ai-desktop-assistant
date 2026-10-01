@@ -1,7 +1,7 @@
 # Aivora — AI Desktop Assistant
 
 <p align="center">
-  <img src="./app-icon.svg" alt="Aivora" width="120" />
+  <img src="./public/notes/img/logo.png" alt="Aivora" width="120" />
 </p>
 
 <h3 align="center">A floating AI assistant for your desktop</h3>
