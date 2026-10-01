@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background glow -->
+    <radialGradient id="auraGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="60%" stop-color="#00f5ff" stop-opacity="0.3" />
+      <stop offset="85%" stop-color="#ff2a9d" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Outer Rim Gradient -->
+    <linearGradient id="rimGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f5ff" />
+      <stop offset="35%" stop-color="#00d4ff" />
+      <stop offset="65%" stop-color="#ff2a9d" />
+      <stop offset="85%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#00f5ff" />
+    </linearGradient>
+
+    <!-- Top Cyan Fluid Gradient -->
+    <radialGradient id="topCyanFluid" cx="30%" cy="20%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="22%" stop-color="#00f0ff" stop-opacity="0.95" />
+      <stop offset="55%" stop-color="#0099ff" stop-opacity="0.85" />
+      <stop offset="85%" stop-color="#1e1b4b" stop-opacity="0.45" />
+      <stop offset="100%" stop-color="transparent" />
+    </radialGradient>
+
+    <!-- Magenta Fluid Gradient -->
+    <linearGradient id="magentaFluidGrad" x1="50%" y1="15%" x2="100%" y2="85%">
+      <stop offset="0%" stop-color="#ff2a9d" stop-opacity="0.95" />
+      <stop offset="45%" stop-color="#c026d3" stop-opacity="0.88" />
+      <stop offset="75%" stop-color="#3b82f6" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#00f5ff" stop-opacity="0.95" />
+    </linearGradient>
+
+    <!-- Head Core Gradient -->
+    <radialGradient id="headCoreGrad" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#16244f" />
+      <stop offset="45%" stop-color="#080d22" />
+      <stop offset="85%" stop-color="#02040b" />
+    </radialGradient>
+
+    <!-- Bottom Crescent Glow Gradient -->
+    <linearGradient id="bottomGlowGrad" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.4" />
+      <stop offset="25%" stop-color="#00f5ff" stop-opacity="1" />
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="1" />
+      <stop offset="75%" stop-color="#00f5ff" stop-opacity="1" />
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0.4" />
+    </linearGradient>
+  </defs>
+
+  <!-- Aura -->
+  <circle cx="256" cy="256" r="250" fill="url(#auraGrad)" />
+
+  <!-- Sphere Background -->
+  <circle cx="256" cy="256" r="220" fill="#030611" />
+
+  <!-- Head Core -->
+  <circle cx="256" cy="256" r="185" fill="url(#headCoreGrad)" />
+
+  <!-- Glass Membrane Scaled to 512 -->
+  <g transform="translate(36, 36) scale(4.4)">
+    <path d="M 50 2 C 76 2, 98 24, 98 50 C 98 76, 76 98, 50 98 C 24 98, 2 76, 2 50 C 2 24, 24 2, 50 2 Z M 50 14 C 32 14, 16 28, 15 46 C 14 56, 18 68, 28 78 C 38 88, 56 89, 68 83 C 78 78, 86 66, 85 52 C 84 36, 70 14, 50 14 Z"
+          fill="url(#topCyanFluid)" fill-rule="evenodd" />
+    <path d="M 65 10 C 86 16, 98 32, 98 52 C 98 74, 82 94, 60 97 C 72 92, 85 80, 85 64 C 85 48, 76 34, 66 22 C 63 18, 64 14, 65 10 Z"
+          fill="url(#magentaFluidGrad)" />
+    <circle cx="50" cy="50" r="48.5" stroke="url(#rimGrad)" stroke-width="2" fill="none" />
+    <path d="M 28 94 C 42 97.5, 58 97.5, 72 94 C 58 95.8, 42 95.8, 28 94 Z" fill="#ffffff" />
+    <path d="M 22 91 C 40 96.5, 60 96.5, 78 91 C 60 94.8, 40 94.8, 22 91 Z" fill="url(#bottomGlowGrad)" opacity="0.9" />
+    <path d="M 20 18 C 30 11, 46 8, 60 9 C 48 10.5, 34 13.5, 20 18 Z" fill="#ffffff" opacity="0.8" />
+  </g>
+
+  <!-- Mascot Eyes (Pure glowing white) -->
+  <g transform="translate(256, 256)">
+    <!-- Left Eye -->
+    <ellipse cx="-34" cy="0" rx="20" ry="32" fill="#ffffff" transform="rotate(-3, -34, 0)" />
+    <!-- Right Eye -->
+    <ellipse cx="34" cy="0" rx="20" ry="32" fill="#ffffff" transform="rotate(3, 34, 0)" />
+  </g>
+</svg>
